@@ -2,12 +2,19 @@ Subject
     String val
     String name
     Course[] courses
-        String name
-        int code
+        String fullname
         char suffix
         Component[] components
             String type
             Section[] sections
                 int section_no
                 int class_no
-            
+                Timeslot[] timeslots
+                    int day
+                    int start_time
+                    int length
+
+
+
+                
+For Redis Store

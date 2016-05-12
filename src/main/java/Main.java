@@ -1,53 +1,91 @@
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.Elements;
 
-public class Main {
+import com.google.gson.Gson;
 
-	static final String url = "http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
+public class Main {
 
 	public static void main(String[] args) throws IOException {
 
-		Document doc = Jsoup.connect(url).get();
+		List<Data> termA = new ArrayList<>();
+		List<Data> termB = new ArrayList<>();
 
-		Element subject = doc.getElementById("inputSubject");
-		Elements courseCodes = subject.getElementsByTag("option");
+		Pattern regex = Pattern.compile(".*\\d{4}(\\w).*");
 
-		courseCodes.remove(0);
+		int count = 0;
 
-		// processCourse(courseCodes.get(0).val(), courseCodes.get(0).text());
+		File dir = new File("dump");
+		File[] dirListing = dir.listFiles();
+		if (dirListing != null) {
+			for (File file : dirListing) {
+				Document doc = Jsoup.parse(file, "UTF-8", "");
+				Elements course_names = doc.getElementsByTag("caption");
+				for (Element e : course_names) {
 
-		for (int i = 91; i < courseCodes.size(); i++) {
+					// assign params to Data object
+					Data temp = new Data();
+					temp.id = count;
+					temp.text = e.text();
 
-			Element item = courseCodes.get(i);
-			String content = processCourse(item.val());
+					String suffix;
+					Matcher m = regex.matcher(e.text());
+					
+					// if match found, assign to suffix, else assign ""
+					if (m.find())
+						suffix = m.group(1);
+					else
+						suffix = "";
 
-			File file = new File("dump\\" + item.val());
-			file.createNewFile();
+					// A term
+					if (suffix.equals("A") || suffix.equals("F")
+							|| suffix.equals("W") || suffix.equals("Q")
+							|| suffix.equals("R"))
+						termA.add(temp);
+					// B term
+					else if (suffix.equals("B") || suffix.equals("G")
+							|| suffix.equals("X") || suffix.equals("S")
+							|| suffix.equals("T"))
+						termB.add(temp);
+					// Both terms
+					else if (suffix.equals("") || suffix.equals("E")
+							|| suffix.equals("Y") || suffix.equals("Z")
+							|| suffix.equals("U")) {
+						termA.add(temp);
+						termB.add(temp);
+					} else
+						System.out.println(temp.text);
 
-			FileWriter fw = new FileWriter(file.getAbsoluteFile());
-			BufferedWriter bw = new BufferedWriter(fw);
-			bw.write(content);
-			bw.close();
-			System.out.println(item.val() + " done");
+					count++;
+				}
 
+			}
+		} else {
+			System.out.println("Not a directory");
 		}
-	}
 
-	static String processCourse(String courseCode) throws IOException {
-		Document doc = Jsoup.connect(url).data("subject", courseCode)
-				.data("Designation", "Any").data("catalognbr", "")
-				.data("CourseTime", "All").data("Component", "All")
-				.data("time", "").data("end_time", "").data("day", "m")
-				.data("day", "tu").data("day", "w").data("day", "th")
-				.data("day", "f").data("Campus", "Any")
-				.data("command", "search").timeout(10 * 1000).post();
+		
+		// Console printing is glitchy. Print one set at a time
+		
+		System.out.println(new Gson().toJson(termA));
+		System.out.println("a count:" + termA.size());
+		
+		System.out.println(new Gson().toJson(termB));
+		System.out.println("b count:" + termB.size());
+		
+		System.out.println("total count:" + count);
 
-		return doc.toString();
 	}
+}
+
+class Data {
+	public int id;
+	public String text;
 }
