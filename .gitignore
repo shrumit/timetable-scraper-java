@@ -5,5 +5,7 @@
 log/
 target/
 dump/
+dump1/
 
-output.txt
+master.txt
+search.txt

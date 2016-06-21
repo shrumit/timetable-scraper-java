@@ -14,22 +14,28 @@ import org.jsoup.nodes.*;
 import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+
+import com.google.gson.annotations.Expose;
 
 public class Main {
 
 	public static void main(String[] args) throws IOException {
 
-		Pattern regex = Pattern.compile("(.*) -.*");
-
 		int count = 0;
 
-		File dir = new File("dump1");
+		// Retrieve files in directory
+		File dir = new File("dump");
 		File[] fileList = dir.listFiles();
 
 		List<Course> master_list = new ArrayList<>();
+		StringBuilder termA = new StringBuilder("var data = []; data[0] = [");
+		StringBuilder termB = new StringBuilder("data[1] = [");
+		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
+				.create();
 
 		if (fileList != null) {
 
@@ -40,75 +46,102 @@ public class Main {
 
 				// for each course in file
 				for (Element course : courseList) {
-					Course data = new Course();
-					List<Component> comp_list = new ArrayList<>();
-					List<Section> section_list = new ArrayList<>();
+					Course c = new Course();
 
 					// extract course name
-					Matcher m = regex.matcher(course
-							.getElementsByTag("caption").first().text());
-					m.find();
-					data.name = m.group(1);
-
-					Component temp_comp = new Component();
-					Section temp_section = new Section();
+					c.text = course.getElementsByTag("caption").first().text();
+					// System.out.println("working on " + c.text);
 
 					Element body = course.select("tbody").first();
-					Elements rows = body.getElementsByTag("tr");
+					Elements rows = body.select("> tr");
 
-					boolean flag = false;
+					Component tempcomp = new Component();
+					Section tempsect = new Section();
 
-					// per row of table
+					// For every row in course table
 					for (Element row : rows) {
-						if (flag) {
-							flag = !flag;
+						Elements td = row.select("> td");
+						String rowsect = td.get(0).text();
+						String rowcomp = td.get(1).text();
+
+						// Short-circuit if EXM component
+						if (rowcomp.equals("EXM"))
 							continue;
+
+						// if new component in current row
+						if (!tempcomp.name.equals(rowcomp)) {
+							tempcomp.add(tempsect);
+							c.add(tempcomp);
+							tempcomp = new Component(rowcomp);
+							tempsect = new Section(rowsect);
+						}
+						// if new section in current row
+						else if (!tempsect.name.equals(rowsect)) {
+							tempcomp.add(tempsect);
+							tempsect = new Section(rowsect);
 						}
 
-						System.out.println("in row");
+						// Get times
+						String start = td.get(4).text();
+						String end = td.get(5).text();
 
-						Elements td = row.getElementsByTag("td");
+						// Get str1 and str2
+						Pattern pattern = Pattern
+								.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
+						Matcher m = pattern.matcher(c.text);
+						m.find();
+						String str1 = m.group(1) + " " + m.group(2);
+						String str2 = tempcomp.name + " " + tempsect.name;
+						// System.out.println(str1 + str2);
 
-						// make new temp_comp if required
-						if (temp_comp.name == null)
-							temp_comp = new Component(td.get(1).text());
-						else if (!td.get(1).text().equals(temp_comp.name)) {
-							comp_list.add(temp_comp);
-							temp_comp = new Component(td.get(1).text());
+						// Get day
+						Elements days = td.get(3).getElementsByTag("td");
+						//
+						for (int i = 1; i < days.size(); i++) {
+							if (!days.get(i).text().equals("\u00a0")) {
+								Timeslot tempts = new Timeslot(i, start, end,
+										str1, str2);
+								tempsect.timeslots.add(tempts);
+							}
 						}
-
-						// make new temp_section if required
-						if (temp_section.number == -1)
-							temp_section = new Section();
-						else if (!td.get(0).text().equals(temp_section.number)) {
-							temp_section = new Section();
-							section_list.add(temp_section);
-						}
-
-						System.out.println("td get 3:" + td.get(3));
-						Integer[] days = parse_days(td.get(3));
-						System.out.println("days len:" + days.length);
-
-						for (Integer day : days) {
-							if (day == null)
-								break;
-							Timeslot ts = new Timeslot();
-							ts.day = (int) day;
-							ts.startTime = parse_time(td.get(4).text());
-							ts.endTime = parse_time(td.get(5).text());
-							System.out.println("ts.day" + ts.day);
-							temp_section.add(ts);
-						}
-						flag = !flag;
 					}
-					section_list.add(temp_section);
-					temp_comp.sections = section_list.toArray(new Section[1]);
-					comp_list.add(temp_comp);
-					data.components = comp_list.toArray(new Component[1]);
-					master_list.add(data);
-					System.out.println("ADDED");
+
+					tempcomp.add(tempsect);
+					c.add(tempcomp);
+					c.id = count;
+					master_list.add(c);
+
+					// SEARCH DATA
+					Pattern regex = Pattern.compile(".*\\d{4}(\\w).*");
+					String suffix;
+					Matcher m = regex.matcher(c.text);
+					// if match found, assign to suffix, else assign ""
+					if (m.find())
+						suffix = m.group(1);
+					else
+						suffix = "";
+
+					if (suffix.equals("A") || suffix.equals("F")
+							|| suffix.equals("W") || suffix.equals("Q")
+							|| suffix.equals("R"))
+						termA.append(gsonX.toJson(c)).append(",");
+					// B term
+					else if (suffix.equals("B") || suffix.equals("G")
+							|| suffix.equals("X") || suffix.equals("S")
+							|| suffix.equals("T"))
+						termB.append(gsonX.toJson(c)).append(",");
+					// Both terms
+					else if (suffix.equals("") || suffix.equals("E")
+							|| suffix.equals("Y") || suffix.equals("Z")
+							|| suffix.equals("U")) {
+						termA.append(gsonX.toJson(c)).append(",");
+						termB.append(gsonX.toJson(c)).append(",");
+					} else
+						System.out.println("Unexpected suffix: " + c.text);
+					count++;
 				}
 			}
+
 		} else {
 			System.out.println("Not a directory");
 		}
@@ -116,13 +149,31 @@ public class Main {
 		System.out.println("master list size " + master_list.size());
 		Gson gson = new Gson();
 
-		File output = new File("output.txt");
+		// Save master_list objects to file
+		File output = new File("master.txt");
 		if (!output.exists()) {
 			output.createNewFile();
 		}
 		FileWriter fw = new FileWriter(output.getAbsoluteFile());
 		BufferedWriter bw = new BufferedWriter(fw);
+		bw.write("var courses = ");
 		bw.write(gson.toJson(master_list));
+		bw.close();
+
+		termA.deleteCharAt(termA.length() - 1);
+		termB.deleteCharAt(termB.length() - 1);
+		termA.append("];");
+		termB.append("];");
+
+		output = new File("search.txt");
+		if (!output.exists()) {
+			output.createNewFile();
+		}
+
+		fw = new FileWriter(output.getAbsoluteFile());
+		bw = new BufferedWriter(fw);
+		bw.write(termA.toString());
+		bw.write(termB.toString());
 		bw.close();
 
 	}// end of method main
@@ -148,47 +199,87 @@ public class Main {
 }// end of class Main
 
 class Course {
-	String name;
-	Component[] components;
+	@Expose
+	public int id;
+	@Expose
+	public String text;
+	public ArrayList<Component> components;
+
+	Course() {
+		components = new ArrayList<Component>(3);
+	}
+
+	public void add(Component comp) {
+		if (!comp.name.equals(""))
+			components.add(comp);
+	}
 }
 
 class Component {
-	String name;
-	Section[] sections;
+	public String name;
+	public ArrayList<Section> sections;
 
 	Component() {
-		name = null;
-		ArrayUtils.nullToEmpty(sections);
+		this("");
 	}
 
 	Component(String name) {
 		this.name = name;
-		ArrayUtils.nullToEmpty(sections);
+		sections = new ArrayList<Section>();
 	}
 
-	void add(Section e) {
-		List<Section> temp = new ArrayList<Section>(Arrays.asList(sections));
-		temp.add(e);
+	public void add(Section sec) {
+		if (!sec.name.equals(""))
+			sections.add(sec);
 	}
-
 }
 
 class Section {
-	int number;
-	List<Timeslot> timeslots;
+	public String name;
+	public ArrayList<Timeslot> timeslots;
 
 	Section() {
-		number = -1;
-		timeslots = new ArrayList<Timeslot>();
+		this("");
 	}
 
-	void add(Timeslot e) {
-		timeslots.add(e);
+	Section(String name) {
+		this.name = name;
+		timeslots = new ArrayList<Timeslot>();
 	}
 }
 
 class Timeslot {
-	int day;
-	int startTime;
-	int endTime;
+	public int day;
+	public int start;
+	public int length;
+	public String[] str;
+
+	Timeslot(int day, String start, String end, String str1, String str2) {
+		this.day = day;
+		parseTime(start, end);
+		str = new String[] { str1, str2 };
+	}
+
+	void parseTime(String start, String end) {
+		this.start = convertTime(start);
+		this.length = convertTime(end) - this.start;
+	}
+
+	int convertTime(String str) {
+		int total = 0;
+		String[] one = str.split(" ");
+		if (one[1].equals("PM"))
+			total = 24;
+		String[] two = one[0].split(":");
+		int hour = Integer.parseInt(two[0]);
+		int minute = Integer.parseInt(two[1]);
+		if (hour == 12)
+			hour = 0;
+		total += 2 * (hour - 8);
+		if (minute != 0)
+			total += 1;
+
+		return total;
+	}
+
 }
