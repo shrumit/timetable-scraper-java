@@ -22,6 +22,8 @@ public class Main {
 
 	public static void main(String[] args) throws IOException {
 
+		long time_start = System.nanoTime();
+
 		int count = 0;
 
 		// Retrieve files in directory
@@ -31,9 +33,16 @@ public class Main {
 		List<Course> master_list = new ArrayList<>();
 		StringBuilder termA = new StringBuilder("var data = []; data[0] = [");
 		StringBuilder termB = new StringBuilder("data[1] = [");
+		// For search data arrays
 		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
 				.create();
 
+		// Regex to shorten name
+		Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
+
+		// Regex for selecting course code suffix
+		Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
+		
 		if (fileList != null) {
 
 			// for each file in directory
@@ -77,10 +86,8 @@ public class Main {
 						String start = td.get(4).text();
 						String end = td.get(5).text();
 
-						// Get str1 and str2
-						Pattern pattern = Pattern
-								.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
-						Matcher m = pattern.matcher(c.text);
+						// Get str1 and str2, short versions of course name and section
+						Matcher m = shortname_regex.matcher(c.text);
 						m.find();
 						String str1 = m.group(1) + " " + m.group(2);
 						String str2 = tempcomp.name + " " + tempsect.name;
@@ -104,15 +111,15 @@ public class Main {
 
 					// MAKE SEARCH DATA
 					
-					Pattern regex = Pattern.compile(".*\\d{4}(\\w).*");
 					String suffix;
-					Matcher m = regex.matcher(c.text);
+					Matcher m = suffix_regex.matcher(c.text);
 					// if match found, assign to suffix, else assign ""
 					if (m.find())
 						suffix = m.group(1);
 					else
 						suffix = "";
 
+					// A term
 					if (suffix.equals("A") || suffix.equals("F")
 							|| suffix.equals("W") || suffix.equals("Q")
 							|| suffix.equals("R"))
@@ -138,7 +145,6 @@ public class Main {
 			System.out.println("Not a directory");
 		}
 
-		System.out.println("master list size " + master_list.size());
 		Gson gson = new Gson();
 
 		// Save master_list objects to file
@@ -155,7 +161,7 @@ public class Main {
 		// remove trailing commas
 		termA.deleteCharAt(termA.length() - 1);
 		termB.deleteCharAt(termB.length() - 1);
-		
+
 		termA.append("];");
 		termB.append("];");
 
@@ -170,6 +176,9 @@ public class Main {
 		bw.write(termB.toString());
 		bw.close();
 
+		long time_end = System.nanoTime();
+		System.out.println("Scrapped " + master_list.size() + " courses in "
+				+ (time_end - time_start) / 1000000 + "ms");
 	}// end of method main
 
 }// end of class Main
@@ -187,12 +196,12 @@ class Course {
 
 	public void add(Component comp) {
 		// if component isn't unnamed or empty
-		if (!comp.name.equals("") && (comp.sections.size() > 0)){
-			Iterator<Component> iterator = components.iterator();			
+		if (!comp.name.equals("") && (comp.sections.size() > 0)) {
+			Iterator<Component> iterator = components.iterator();
 			// if same named Component exists then append sections to it
-			while (iterator.hasNext()){
+			while (iterator.hasNext()) {
 				Component cur = iterator.next();
-				if (cur.name.equals(comp.name)){
+				if (cur.name.equals(comp.name)) {
 					cur.sections.addAll(comp.sections);
 					return;
 				}
@@ -219,9 +228,9 @@ class Component {
 		if ((!sec.name.equals("")) && (sec.timeslots.size() > 0))
 			sections.add(sec);
 	}
-	
+
 	public void append(Component in) {
-		
+
 	}
 }
 
