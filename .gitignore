@@ -7,5 +7,5 @@ target/
 dump/
 dump1/
 
-master.txt
-search.txt
+master.*
+search.*

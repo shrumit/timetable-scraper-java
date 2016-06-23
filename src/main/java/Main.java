@@ -2,23 +2,20 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.*;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-
 import com.google.gson.annotations.Expose;
 
 public class Main {
@@ -50,7 +47,6 @@ public class Main {
 
 					// extract course name
 					c.text = course.getElementsByTag("caption").first().text();
-					// System.out.println("working on " + c.text);
 
 					Element body = course.select("tbody").first();
 					Elements rows = body.select("> tr");
@@ -63,10 +59,6 @@ public class Main {
 						Elements td = row.select("> td");
 						String rowsect = td.get(0).text();
 						String rowcomp = td.get(1).text();
-
-						// Short-circuit if EXM component
-						if (rowcomp.equals("EXM"))
-							continue;
 
 						// if new component in current row
 						if (!tempcomp.name.equals(rowcomp)) {
@@ -94,9 +86,8 @@ public class Main {
 						String str2 = tempcomp.name + " " + tempsect.name;
 						// System.out.println(str1 + str2);
 
-						// Get day
+						// Get days and make timeslot per day
 						Elements days = td.get(3).getElementsByTag("td");
-						//
 						for (int i = 1; i < days.size(); i++) {
 							if (!days.get(i).text().equals("\u00a0")) {
 								Timeslot tempts = new Timeslot(i, start, end,
@@ -111,7 +102,8 @@ public class Main {
 					c.id = count;
 					master_list.add(c);
 
-					// SEARCH DATA
+					// MAKE SEARCH DATA
+					
 					Pattern regex = Pattern.compile(".*\\d{4}(\\w).*");
 					String suffix;
 					Matcher m = regex.matcher(c.text);
@@ -150,7 +142,7 @@ public class Main {
 		Gson gson = new Gson();
 
 		// Save master_list objects to file
-		File output = new File("master.txt");
+		File output = new File("master.js");
 		if (!output.exists()) {
 			output.createNewFile();
 		}
@@ -160,12 +152,14 @@ public class Main {
 		bw.write(gson.toJson(master_list));
 		bw.close();
 
+		// remove trailing commas
 		termA.deleteCharAt(termA.length() - 1);
 		termB.deleteCharAt(termB.length() - 1);
+		
 		termA.append("];");
 		termB.append("];");
 
-		output = new File("search.txt");
+		output = new File("search.js");
 		if (!output.exists()) {
 			output.createNewFile();
 		}
@@ -178,24 +172,6 @@ public class Main {
 
 	}// end of method main
 
-	static Integer[] parse_days(Element e) {
-		List<Integer> list = new ArrayList<Integer>();
-		Elements tds = e.getElementsByTag("tr").first().getElementsByTag("td");
-		int count = 1;
-		for (Element td : tds) {
-			// System.out.println("td text:" + td.text()+":");
-			if (td.text().matches("M|Tu|W|Th|F"))
-				list.add(count);
-			count++;
-		}
-		System.out.println(list.toString());
-		return list.toArray(new Integer[1]);
-	}// end of method parse_days
-
-	static int parse_time(String time) {
-		return 1;
-	}
-
 }// end of class Main
 
 class Course {
@@ -206,12 +182,23 @@ class Course {
 	public ArrayList<Component> components;
 
 	Course() {
-		components = new ArrayList<Component>(3);
+		components = new ArrayList<Component>();
 	}
 
 	public void add(Component comp) {
-		if (!comp.name.equals(""))
+		// if component isn't unnamed or empty
+		if (!comp.name.equals("") && (comp.sections.size() > 0)){
+			Iterator<Component> iterator = components.iterator();			
+			// if same named Component exists then append sections to it
+			while (iterator.hasNext()){
+				Component cur = iterator.next();
+				if (cur.name.equals(comp.name)){
+					cur.sections.addAll(comp.sections);
+					return;
+				}
+			}
 			components.add(comp);
+		}
 	}
 }
 
@@ -229,8 +216,12 @@ class Component {
 	}
 
 	public void add(Section sec) {
-		if (!sec.name.equals(""))
+		if ((!sec.name.equals("")) && (sec.timeslots.size() > 0))
 			sections.add(sec);
+	}
+	
+	public void append(Component in) {
+		
 	}
 }
 
@@ -246,6 +237,7 @@ class Section {
 		this.name = name;
 		timeslots = new ArrayList<Timeslot>();
 	}
+
 }
 
 class Timeslot {
