@@ -31,8 +31,8 @@ public class Main {
 		File[] fileList = dir.listFiles();
 
 		List<Course> master_list = new ArrayList<>();
-		StringBuilder termA = new StringBuilder("var data = []; data[0] = [");
-		StringBuilder termB = new StringBuilder("data[1] = [");
+		StringBuilder termA = new StringBuilder("var search_data = []; search_data[0] = [");
+		StringBuilder termB = new StringBuilder("search_data[1] = [");
 		// For search data arrays
 		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
 				.create();
@@ -97,7 +97,7 @@ public class Main {
 						Elements days = td.get(3).getElementsByTag("td");
 						for (int i = 1; i < days.size(); i++) {
 							if (!days.get(i).text().equals("\u00a0")) {
-								Timeslot tempts = new Timeslot(i, start, end,
+								Timeslot tempts = new Timeslot(i-1, start, end,
 										str1, str2);
 								tempsect.timeslots.add(tempts);
 							}
@@ -251,8 +251,7 @@ class Section {
 
 class Timeslot {
 	public int day;
-	public int start;
-	public int length;
+	public int timebit;
 	public String[] str;
 
 	Timeslot(int day, String start, String end, String str1, String str2) {
@@ -261,9 +260,15 @@ class Timeslot {
 		str = new String[] { str1, str2 };
 	}
 
-	void parseTime(String start, String end) {
-		this.start = convertTime(start);
-		this.length = convertTime(end) - this.start;
+	void parseTime(String start_in, String end) {
+		int start = convertTime(start_in);
+		int length = convertTime(end) - start;
+		int mask = 0;
+		mask = ~mask;
+		mask <<= length;
+		mask = ~mask;
+		mask <<=  start;
+		timebit = mask;
 	}
 
 	int convertTime(String str) {
