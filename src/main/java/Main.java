@@ -31,8 +31,9 @@ public class Main {
 		File[] fileList = dir.listFiles();
 
 		List<Course> master_list = new ArrayList<>();
-		StringBuilder termA = new StringBuilder("var search_data = []; search_data[0] = [");
-		StringBuilder termB = new StringBuilder("search_data[1] = [");
+		StringBuilder termA = new StringBuilder("[[");
+		StringBuilder termB = new StringBuilder("[");
+		
 		// For search data arrays
 		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
 				.create();
@@ -56,7 +57,8 @@ public class Main {
 
 					// extract course name
 					c.text = course.getElementsByTag("caption").first().text();
-
+					c.id = count;
+					
 					Element body = course.select("tbody").first();
 					Elements rows = body.select("> tr");
 
@@ -98,7 +100,7 @@ public class Main {
 						for (int i = 1; i < days.size(); i++) {
 							if (!days.get(i).text().equals("\u00a0")) {
 								Timeslot tempts = new Timeslot(i-1, start, end,
-										str1, str2);
+										str1, str2, count);
 								tempsect.timeslots.add(tempts);
 							}
 						}
@@ -106,7 +108,7 @@ public class Main {
 
 					tempcomp.add(tempsect);
 					c.add(tempcomp);
-					c.id = count;
+					
 					master_list.add(c);
 
 					// MAKE SEARCH DATA
@@ -148,13 +150,12 @@ public class Main {
 		Gson gson = new Gson();
 
 		// Save master_list objects to file
-		File output = new File("master.js");
+		File output = new File("master.json");
 		if (!output.exists()) {
 			output.createNewFile();
 		}
 		FileWriter fw = new FileWriter(output.getAbsoluteFile());
 		BufferedWriter bw = new BufferedWriter(fw);
-		bw.write("var courses = ");
 		bw.write(gson.toJson(master_list));
 		bw.close();
 
@@ -162,10 +163,10 @@ public class Main {
 		termA.deleteCharAt(termA.length() - 1);
 		termB.deleteCharAt(termB.length() - 1);
 
-		termA.append("];");
-		termB.append("];");
+		termA.append("],");
+		termB.append("]]");
 
-		output = new File("search.js");
+		output = new File("search.json");
 		if (!output.exists()) {
 			output.createNewFile();
 		}
@@ -251,24 +252,30 @@ class Section {
 
 class Timeslot {
 	public int day;
+	public int start;
+	public int len;
 	public int timebit;
-	public String[] str;
-
-	Timeslot(int day, String start, String end, String str1, String str2) {
+	public String str1;
+	public String str2;
+	public int id;
+	
+	Timeslot(int day, String start, String end, String str1, String str2, int id) {
 		this.day = day;
+		this.str1 = str1;
+		this.str2 = str2;
+		this.id = id;
 		parseTime(start, end);
-		str = new String[] { str1, str2 };
 	}
 
-	void parseTime(String start_in, String end) {
-		int start = convertTime(start_in);
-		int length = convertTime(end) - start;
+	void parseTime(String start, String end) {
+		this.start = convertTime(start);
+		this.len = convertTime(end) - this.start;
 		int mask = 0;
 		mask = ~mask;
-		mask <<= length;
+		mask <<= len;
 		mask = ~mask;
-		mask <<=  start;
-		timebit = mask;
+		mask <<=  this.start;
+		this.timebit = mask;
 	}
 
 	int convertTime(String str) {
