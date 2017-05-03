@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Shrumit Mehta 2016
+ * Copyright (C) Shrumit Mehta 2017
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@ import org.jsoup.select.Elements;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+
+import model.*;
 
 public class Main {
 
@@ -199,118 +201,5 @@ public class Main {
 		System.out.println("Scrapped " + master_list.size() + " courses in "
 				+ (time_end - time_start) / 1000000 + "ms");
 	}// end of method main
-
-}// end of class Main
-
-class Course {
-	@Expose
-	public int id;
-	@Expose
-	public String text;
-	public ArrayList<Component> components;
-
-	Course() {
-		components = new ArrayList<Component>();
-	}
-
-	public void add(Component comp) {
-		// if component isn't unnamed or empty
-		if (!comp.name.equals("") && (comp.sections.size() > 0)) {
-			Iterator<Component> iterator = components.iterator();
-			// if same named Component exists then append sections to it
-			while (iterator.hasNext()) {
-				Component cur = iterator.next();
-				if (cur.name.equals(comp.name)) {
-					cur.sections.addAll(comp.sections);
-					return;
-				}
-			}
-			components.add(comp);
-		}
-	}
-}
-
-class Component {
-	public String name;
-	public ArrayList<Section> sections;
-
-	Component() {
-		this("");
-	}
-
-	Component(String name) {
-		this.name = name;
-		sections = new ArrayList<Section>();
-	}
-
-	public void add(Section sec) {
-		if ((!sec.name.equals("")) && (sec.timeslots.size() > 0))
-			sections.add(sec);
-	}
-
-	public void append(Component in) {
-
-	}
-}
-
-class Section {
-	public String name;
-	public ArrayList<Timeslot> timeslots;
-
-	Section() {
-		this("");
-	}
-
-	Section(String name) {
-		this.name = name;
-		timeslots = new ArrayList<Timeslot>();
-	}
-
-}
-
-class Timeslot {
-	public int day;
-	public int start;
-	public int len;
-	public int timebit;
-	public String str1;
-	public String str2;
-	public int id;
-	
-	Timeslot(int day, String start, String end, String str1, String str2, int id) {
-		this.day = day;
-		this.str1 = str1;
-		this.str2 = str2;
-		this.id = id;
-		parseTime(start, end);
-	}
-
-	void parseTime(String start, String end) {
-		this.start = convertTime(start);
-		this.len = convertTime(end) - this.start;
-		int mask = 0;
-		mask = ~mask;
-		mask <<= len;
-		mask = ~mask;
-		mask <<=  this.start;
-		this.timebit = mask;
-	}
-
-	int convertTime(String str) {
-		int total = 0;
-		String[] one = str.split(" ");
-		if (one[1].equals("PM"))
-			total = 24;
-		String[] two = one[0].split(":");
-		int hour = Integer.parseInt(two[0]);
-		int minute = Integer.parseInt(two[1]);
-		if (hour == 12)
-			hour = 0;
-		total += 2 * (hour - 8);
-		if (minute != 0)
-			total += 1;
-
-		return total;
-	}
 
 }
