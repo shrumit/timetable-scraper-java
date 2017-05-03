@@ -22,7 +22,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,11 +33,13 @@ import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.annotations.Expose;
-
 import model.*;
 
 public class Main {
+
+	static final String inputDir = "dump";
+	static final String outputMaster = "master.json";
+	static final String outputSearch = "search.json";
 
 	public static void main(String[] args) throws IOException {
 
@@ -47,23 +48,24 @@ public class Main {
 		int count = 0;
 
 		// Retrieve files in directory
-		File dir = new File("dump");
+		File dir = new File(inputDir);
 		File[] fileList = dir.listFiles();
 
 		List<Course> master_list = new ArrayList<>();
 		StringBuilder termA = new StringBuilder("[[");
 		StringBuilder termB = new StringBuilder("[");
-		
+
 		// For search data arrays
 		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
 				.create();
 
 		// Regex to shorten name
-		Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
+		Pattern shortname_regex = Pattern
+				.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
 
 		// Regex for selecting course code suffix
 		Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
-		
+
 		if (fileList != null) {
 
 			// for each file in directory
@@ -78,7 +80,7 @@ public class Main {
 					// extract course name
 					c.text = course.getElementsByTag("caption").first().text();
 					c.id = count;
-					
+
 					Element body = course.select("tbody").first();
 					Elements rows = body.select("> tr");
 
@@ -108,7 +110,8 @@ public class Main {
 						String start = td.get(4).text();
 						String end = td.get(5).text();
 
-						// Get str1 and str2, short versions of course name and section
+						// Get str1 and str2, short versions of course name and
+						// section
 						Matcher m = shortname_regex.matcher(c.text);
 						m.find();
 						String str1 = m.group(1) + " " + m.group(2);
@@ -119,8 +122,8 @@ public class Main {
 						Elements days = td.get(3).getElementsByTag("td");
 						for (int i = 1; i < days.size(); i++) {
 							if (!days.get(i).text().equals("\u00a0")) {
-								Timeslot tempts = new Timeslot(i-1, start, end,
-										str1, str2, count);
+								Timeslot tempts = new Timeslot(i - 1, start,
+										end, str1, str2, count);
 								tempsect.timeslots.add(tempts);
 							}
 						}
@@ -128,11 +131,11 @@ public class Main {
 
 					tempcomp.add(tempsect);
 					c.add(tempcomp);
-					
+
 					master_list.add(c);
 
 					// MAKE SEARCH DATA
-					
+
 					String suffix;
 					Matcher m = suffix_regex.matcher(c.text);
 					// if match found, assign to suffix, else assign ""
@@ -170,7 +173,7 @@ public class Main {
 		Gson gson = new Gson();
 
 		// Save master_list objects to file
-		File output = new File("master.json");
+		File output = new File(outputMaster);
 		if (!output.exists()) {
 			output.createNewFile();
 		}
@@ -186,7 +189,8 @@ public class Main {
 		termA.append("],");
 		termB.append("]]");
 
-		output = new File("search.json");
+		// Save search
+		output = new File(outputSearch);
 		if (!output.exists()) {
 			output.createNewFile();
 		}
