@@ -37,8 +37,4 @@ public class Component {
 		if ((!sec.name.equals("")) && (sec.timeslots.size() > 0))
 			sections.add(sec);
 	}
-
-	public void append(Component in) {
-
-	}
 }
