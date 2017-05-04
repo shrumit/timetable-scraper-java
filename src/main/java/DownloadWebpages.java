@@ -25,7 +25,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.Elements;
 
-public class Main {
+public class DownloadWebpages {
 
 	static final String url = "http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
 
