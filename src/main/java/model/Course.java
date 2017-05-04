@@ -20,6 +20,7 @@ package model;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import com.google.gson.annotations.Expose;
 
@@ -28,7 +29,7 @@ public class Course {
 	public int id;
 	@Expose
 	public String text;
-	public ArrayList<Component> components;
+	public List<Component> components;
 
 	public Course() {
 		components = new ArrayList<Component>();

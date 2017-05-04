@@ -19,10 +19,11 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class Section {
 	public String name;
-	public ArrayList<Timeslot> timeslots;
+	public List<Timeslot> timeslots;
 
 	public Section() {
 		this("");
