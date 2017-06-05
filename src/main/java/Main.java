@@ -20,9 +20,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +33,7 @@ import org.jsoup.select.Elements;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 import model.*;
 
 public class Main {
@@ -52,8 +53,10 @@ public class Main {
 		File[] fileList = dir.listFiles();
 
 		List<Course> master_list = new ArrayList<>();
-		StringBuilder termA = new StringBuilder("[[");
-		StringBuilder termB = new StringBuilder("[");
+		StringJoiner termA = new StringJoiner(",", "[", "]");
+		StringJoiner termB = new StringJoiner(",", "[", "]");
+//		StringBuilder termA = new StringBuilder("[[");
+//		StringBuilder termB = new StringBuilder("[");
 
 		// For search data arrays
 		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
@@ -153,18 +156,18 @@ public class Main {
 					if (suffix.equals("A") || suffix.equals("F")
 							|| suffix.equals("W") || suffix.equals("Q")
 							|| suffix.equals("R"))
-						termA.append(gsonX.toJson(c)).append(",");
+						termA.add(gsonX.toJson(c));
 					// B term
 					else if (suffix.equals("B") || suffix.equals("G")
 							|| suffix.equals("X") || suffix.equals("S")
 							|| suffix.equals("T"))
-						termB.append(gsonX.toJson(c)).append(",");
+						termB.add(gsonX.toJson(c));
 					// Both terms
 					else if (suffix.equals("") || suffix.equals("E")
 							|| suffix.equals("Y") || suffix.equals("Z")
 							|| suffix.equals("U")) {
-						termA.append(gsonX.toJson(c)).append(",");
-						termB.append(gsonX.toJson(c)).append(",");
+						termA.add(gsonX.toJson(c));
+						termB.add(gsonX.toJson(c));
 					} else
 						System.out.println("Unexpected suffix: " + c.text);
 					count++;
@@ -187,13 +190,6 @@ public class Main {
 		bw.write(gson.toJson(master_list));
 		bw.close();
 
-		// remove trailing commas
-		termA.deleteCharAt(termA.length() - 1);
-		termB.deleteCharAt(termB.length() - 1);
-
-		termA.append("],");
-		termB.append("]]");
-
 		// Save search
 		output = new File(outputSearch);
 		if (!output.exists()) {
@@ -202,8 +198,7 @@ public class Main {
 
 		fw = new FileWriter(output.getAbsoluteFile());
 		bw = new BufferedWriter(fw);
-		bw.write(termA.toString());
-		bw.write(termB.toString());
+		bw.write("[" + termA.toString() + "," + termB.toString() + "]");
 		bw.close();
 
 		long time_end = System.nanoTime();
