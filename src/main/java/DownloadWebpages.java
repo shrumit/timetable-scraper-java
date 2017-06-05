@@ -40,11 +40,11 @@ public class DownloadWebpages {
 
 		// processCourse(courseCodes.get(0).val(), courseCodes.get(0).text());
 
-		for (int i = 0; i < courseCodes.size(); i++) {
+		for (int i = 75; i < courseCodes.size(); i++) {
 
 			Element item = courseCodes.get(i);
 			String content = processCourse(item.val());
-
+			System.out.println("dump\\" + item.val());
 			File file = new File("dump\\" + item.val());
 			file.createNewFile();
 

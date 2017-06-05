@@ -71,15 +71,20 @@ public class Main {
 			// for each file in directory
 			for (File file : fileList) {
 				Document doc = Jsoup.parse(file, "UTF-8", "");
+				Elements courseNames = doc.getElementsByTag("h4");
 				Elements courseList = doc.getElementsByClass("table-striped");
-
+				if (courseNames.size() != courseList.size()){
+					System.out.println("Size mismatch.");
+					return;
+				}
+				
 				// for each course in file
-				for (Element course : courseList) {
+				for (int i = 0; i < courseNames.size(); i++) {
+					Element course = courseList.get(i);
 					Course c = new Course();
 
-					// extract course name
-					c.text = course.getElementsByTag("caption").first().text();
 					c.id = count;
+					c.text = courseNames.get(i).text();
 
 					Element body = course.select("tbody").first();
 					Elements rows = body.select("> tr");
@@ -120,9 +125,9 @@ public class Main {
 
 						// Get days and make timeslot per day
 						Elements days = td.get(3).getElementsByTag("td");
-						for (int i = 1; i < days.size(); i++) {
-							if (!days.get(i).text().equals("\u00a0")) {
-								Timeslot tempts = new Timeslot(i - 1, start,
+						for (int j = 1; j < days.size(); j++) {
+							if (!days.get(j).text().equals("\u00a0")) {
+								Timeslot tempts = new Timeslot(j - 1, start,
 										end, str1, str2, count);
 								tempsect.timeslots.add(tempts);
 							}
