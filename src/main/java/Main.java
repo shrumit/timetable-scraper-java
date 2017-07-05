@@ -51,12 +51,11 @@ public class Main {
 		// Retrieve files in directory
 		File dir = new File(inputDir);
 		File[] fileList = dir.listFiles();
+		System.out.println("Number of files:" + fileList.length);
 
 		List<Course> master_list = new ArrayList<>();
 		StringJoiner termA = new StringJoiner(",", "[", "]");
 		StringJoiner termB = new StringJoiner(",", "[", "]");
-//		StringBuilder termA = new StringBuilder("[[");
-//		StringBuilder termB = new StringBuilder("[");
 
 		// For search data arrays
 		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
@@ -69,113 +68,108 @@ public class Main {
 		// Regex for selecting course code suffix
 		Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
 
-		if (fileList != null) {
+		// for each file in directory
+		for (File file : fileList) {
+			Document doc = Jsoup.parse(file, "UTF-8", "");
+			Elements courseNames = doc.getElementsByTag("h4");
+			Elements courseList = doc.getElementsByClass("table-striped");
+			if (courseNames.size() != courseList.size()){
+				System.out.println("Size mismatch.");
+				return;
+			}
+			
+			// for each course in file
+			for (int i = 0; i < courseNames.size(); i++) {
+				Element course = courseList.get(i);
+				Course c = new Course();
 
-			// for each file in directory
-			for (File file : fileList) {
-				Document doc = Jsoup.parse(file, "UTF-8", "");
-				Elements courseNames = doc.getElementsByTag("h4");
-				Elements courseList = doc.getElementsByClass("table-striped");
-				if (courseNames.size() != courseList.size()){
-					System.out.println("Size mismatch.");
-					return;
-				}
-				
-				// for each course in file
-				for (int i = 0; i < courseNames.size(); i++) {
-					Element course = courseList.get(i);
-					Course c = new Course();
+				c.id = count;
+				c.text = courseNames.get(i).text();
+				System.out.println(c.id + ":" + c.text);
 
-					c.id = count;
-					c.text = courseNames.get(i).text();
+				Element body = course.select("tbody").first();
+				Elements rows = body.select("> tr");
 
-					Element body = course.select("tbody").first();
-					Elements rows = body.select("> tr");
+				Component tempcomp = new Component();
+				Section tempsect = new Section();
 
-					Component tempcomp = new Component();
-					Section tempsect = new Section();
+				// For every row in course table
+				for (Element row : rows) {
+					Elements td = row.select("> td");
+					String rowsect = td.get(0).text();
+					String rowcomp = td.get(1).text();
 
-					// For every row in course table
-					for (Element row : rows) {
-						Elements td = row.select("> td");
-						String rowsect = td.get(0).text();
-						String rowcomp = td.get(1).text();
-
-						// if new component in current row
-						if (!tempcomp.name.equals(rowcomp)) {
-							tempcomp.add(tempsect);
-							c.add(tempcomp);
-							tempcomp = new Component(rowcomp);
-							tempsect = new Section(rowsect);
-						}
-						// if new section in current row
-						else if (!tempsect.name.equals(rowsect)) {
-							tempcomp.add(tempsect);
-							tempsect = new Section(rowsect);
-						}
-
-						// Get times
-						String start = td.get(4).text();
-						String end = td.get(5).text();
-
-						// Get str1 and str2, short versions of course name and
-						// section
-						Matcher m = shortname_regex.matcher(c.text);
-						m.find();
-						String str1 = m.group(1) + " " + m.group(2);
-						String str2 = tempcomp.name + " " + tempsect.name;
-						// System.out.println(str1 + str2);
-
-						// Get days and make timeslot per day
-						Elements days = td.get(3).getElementsByTag("td");
-						for (int j = 1; j < days.size(); j++) {
-							if (!days.get(j).text().equals("\u00a0")) {
-								Timeslot tempts = new Timeslot(j - 1, start,
-										end, str1, str2, count);
-								tempsect.timeslots.add(tempts);
-							}
-						}
+					// if new component in current row
+					if (!tempcomp.name.equals(rowcomp)) {
+						tempcomp.add(tempsect);
+						c.add(tempcomp);
+						tempcomp = new Component(rowcomp);
+						tempsect = new Section(rowsect);
+					}
+					// if new section in current row
+					else if (!tempsect.name.equals(rowsect)) {
+						tempcomp.add(tempsect);
+						tempsect = new Section(rowsect);
 					}
 
-					tempcomp.add(tempsect);
-					c.add(tempcomp);
+					// Get times
+					String start = td.get(4).text();
+					String end = td.get(5).text();
 
-					master_list.add(c);
+					// Get str1 and str2, short versions of course name and
+					// section
+					Matcher m = shortname_regex.matcher(c.text);
+					m.find();
+					String str1 = m.group(1) + " " + m.group(2);
+					String str2 = tempcomp.name + " " + tempsect.name;
+					// System.out.println(str1 + str2);
 
-					// MAKE SEARCH DATA
-
-					String suffix;
-					Matcher m = suffix_regex.matcher(c.text);
-					// if match found, assign to suffix, else assign ""
-					if (m.find())
-						suffix = m.group(1);
-					else
-						suffix = "";
-
-					// A term
-					if (suffix.equals("A") || suffix.equals("F")
-							|| suffix.equals("W") || suffix.equals("Q")
-							|| suffix.equals("R"))
-						termA.add(gsonX.toJson(c));
-					// B term
-					else if (suffix.equals("B") || suffix.equals("G")
-							|| suffix.equals("X") || suffix.equals("S")
-							|| suffix.equals("T"))
-						termB.add(gsonX.toJson(c));
-					// Both terms
-					else if (suffix.equals("") || suffix.equals("E")
-							|| suffix.equals("Y") || suffix.equals("Z")
-							|| suffix.equals("U")) {
-						termA.add(gsonX.toJson(c));
-						termB.add(gsonX.toJson(c));
-					} else
-						System.out.println("Unexpected suffix: " + c.text);
-					count++;
+					// Get days and make timeslot per day
+					Elements days = td.get(3).getElementsByTag("td");
+					for (int j = 1; j < days.size(); j++) {
+						if (!days.get(j).text().equals("\u00a0")) {
+							Timeslot tempts = new Timeslot(j - 1, start,
+									end, str1, str2, count);
+							tempsect.timeslots.add(tempts);
+						}
+					}
 				}
-			}
 
-		} else {
-			System.out.println("Not a directory");
+				tempcomp.add(tempsect);
+				c.add(tempcomp);
+
+				master_list.add(c);
+
+				// MAKE SEARCH DATA
+
+				String suffix;
+				Matcher m = suffix_regex.matcher(c.text);
+				// if match found, assign to suffix, else assign ""
+				if (m.find())
+					suffix = m.group(1);
+				else
+					suffix = "";
+
+				// A term
+				if (suffix.equals("A") || suffix.equals("F")
+						|| suffix.equals("W") || suffix.equals("Q")
+						|| suffix.equals("R"))
+					termA.add(gsonX.toJson(c));
+				// B term
+				else if (suffix.equals("B") || suffix.equals("G")
+						|| suffix.equals("X") || suffix.equals("S")
+						|| suffix.equals("T"))
+					termB.add(gsonX.toJson(c));
+				// Both terms
+				else if (suffix.equals("") || suffix.equals("E")
+						|| suffix.equals("Y") || suffix.equals("Z")
+						|| suffix.equals("U")) {
+					termA.add(gsonX.toJson(c));
+					termB.add(gsonX.toJson(c));
+				} else
+					System.out.println("Unexpected suffix: " + c.text);
+				count++;
+			}
 		}
 
 		Gson gson = new Gson();
