@@ -4,8 +4,8 @@
 
 log/
 target/
-dump/
-dump1/
-
-master.*
-search.*
+dump*
+master*
+search*
+output/
+/bin/
