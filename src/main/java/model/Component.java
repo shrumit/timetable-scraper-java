@@ -35,7 +35,7 @@ public class Component {
 	}
 
 	public void add(Section sec) {
-		if ((!sec.name.equals("")) && (sec.timeslots.size() > 0))
+		if ((sec.name != null) && (sec.name.length() > 0) && (sec.timeslots.size() > 0))
 			sections.add(sec);
 	}
 }

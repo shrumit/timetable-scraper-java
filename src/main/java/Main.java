@@ -1,16 +1,17 @@
+
 /*
  * Copyright (C) Shrumit Mehta 2017
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
@@ -38,10 +39,10 @@ import model.*;
 
 public class Main {
 
-	static final String inputDir = "dump";
-	static final String outputMaster = "master.json";
-	static final String outputSearch = "search.json";
-
+	static final String inputDir = "dump_2019";
+	static final String outputMaster = "output_2019/master.json";
+	static final String outputSearch = "output_2019/search.json";
+	
 	public static void main(String[] args) throws IOException {
 
 		long time_start = System.nanoTime();
@@ -58,12 +59,10 @@ public class Main {
 		StringJoiner termB = new StringJoiner(",", "[", "]");
 
 		// For search data arrays
-		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation()
-				.create();
+		Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
 
 		// Regex to shorten name
-		Pattern shortname_regex = Pattern
-				.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
+		Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
 
 		// Regex for selecting course code suffix
 		Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
@@ -73,11 +72,11 @@ public class Main {
 			Document doc = Jsoup.parse(file, "UTF-8", "");
 			Elements courseNames = doc.getElementsByTag("h4");
 			Elements courseList = doc.getElementsByClass("table-striped");
-			if (courseNames.size() != courseList.size()){
+			if (courseNames.size() != courseList.size()) {
 				System.out.println("Size mismatch.");
 				return;
 			}
-			
+
 			// for each course in file
 			for (int i = 0; i < courseNames.size(); i++) {
 				Element course = courseList.get(i);
@@ -96,25 +95,25 @@ public class Main {
 				// For every row in course table
 				for (Element row : rows) {
 					Elements td = row.select("> td");
-					String rowsect = td.get(0).text();
-					String rowcomp = td.get(1).text();
+					String section = td.get(0).text();
+					String comp = td.get(1).text();
+					String number = td.get(2).text();
+					String startTime = td.get(4).text();
+					String endTime = td.get(4).text();
+					String location = td.get(6).text();
+					String instructor = td.get(7).text();
 
 					// if new component in current row
-					if (!tempcomp.name.equals(rowcomp)) {
+					if (!tempcomp.name.equals(comp)) {
 						tempcomp.add(tempsect);
 						c.add(tempcomp);
-						tempcomp = new Component(rowcomp);
-						tempsect = new Section(rowsect);
+						tempcomp = new Component(comp);
 					}
 					// if new section in current row
-					else if (!tempsect.name.equals(rowsect)) {
+					else if (!tempsect.name.equals(section)) {
 						tempcomp.add(tempsect);
-						tempsect = new Section(rowsect);
 					}
-
-					// Get times
-					String start = td.get(4).text();
-					String end = td.get(5).text();
+					tempsect = new Section(section, number, location, instructor, startTime, endTime);
 
 					// Get str1 and str2, short versions of course name and
 					// section
@@ -128,8 +127,7 @@ public class Main {
 					Elements days = td.get(3).getElementsByTag("td");
 					for (int j = 1; j < days.size(); j++) {
 						if (!days.get(j).text().equals("\u00a0")) {
-							Timeslot tempts = new Timeslot(j - 1, start,
-									end, str1, str2, count);
+							Timeslot tempts = new Timeslot(j - 1, startTime, endTime, str1, str2, count);
 							tempsect.timeslots.add(tempts);
 						}
 					}
@@ -151,18 +149,15 @@ public class Main {
 					suffix = "";
 
 				// A term
-				if (suffix.equals("A") || suffix.equals("F")
-						|| suffix.equals("W") || suffix.equals("Q")
+				if (suffix.equals("A") || suffix.equals("F") || suffix.equals("W") || suffix.equals("Q")
 						|| suffix.equals("R"))
 					termA.add(gsonX.toJson(c));
 				// B term
-				else if (suffix.equals("B") || suffix.equals("G")
-						|| suffix.equals("X") || suffix.equals("S")
+				else if (suffix.equals("B") || suffix.equals("G") || suffix.equals("X") || suffix.equals("S")
 						|| suffix.equals("T"))
 					termB.add(gsonX.toJson(c));
 				// Both terms
-				else if (suffix.equals("") || suffix.equals("E")
-						|| suffix.equals("Y") || suffix.equals("Z")
+				else if (suffix.equals("") || suffix.equals("E") || suffix.equals("Y") || suffix.equals("Z")
 						|| suffix.equals("U")) {
 					termA.add(gsonX.toJson(c));
 					termB.add(gsonX.toJson(c));
@@ -196,8 +191,8 @@ public class Main {
 		bw.close();
 
 		long time_end = System.nanoTime();
-		System.out.println("Scrapped " + master_list.size() + " courses in "
-				+ (time_end - time_start) / 1000000 + "ms");
+		System.out
+				.println("Scrapped " + master_list.size() + " courses in " + (time_end - time_start) / 1000000 + "ms");
 	}// end of method main
 
 }

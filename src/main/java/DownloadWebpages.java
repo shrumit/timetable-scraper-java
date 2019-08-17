@@ -32,24 +32,29 @@ public class DownloadWebpages {
 	static final String url = "http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
 	static final int TIMEOUT = 10 * 1000;
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// get list of subjects
 		Document doc = Jsoup.connect(url).get();
 		Element subjectInput = doc.getElementById("inputSubject");
 		Elements subjectCodes = subjectInput.getElementsByTag("option");
-
+		System.out.println("Number of subjects:" + subjectCodes.size());
 		// download and store each subject's webpage
-		for (int i = 0; i < subjectCodes.size(); i++) {
+		for (int i = 57; i < subjectCodes.size(); i++) {
+//			for (int i = 0; i < 3; i++) {
 			String code = subjectCodes.get(i).val();
 			if (code.length() == 0)
 				continue;
 
+			System.out.println("Attempting:" + i + ":" + code);
 			String content = downloadCoursePage(code);
 
 			if (content.length() < 3000 && content.contains("captcha")) {
-				System.out.println("Please solve captcha and try again.");
-				return;
+				//System.out.println("Please solve captcha and try again.");
+				//return;
+				Thread.sleep(30*1000);
+				i--;
+				continue;
 			}
 
 			// write to file
@@ -61,6 +66,7 @@ public class DownloadWebpages {
 			bw.close();
 
 			System.out.println("Downloaded:" + i + ":" + code);
+//			Thread.sleep(2000);
 		}
 		System.out.println("Finished.");
 	}
@@ -86,14 +92,23 @@ public class DownloadWebpages {
 		// Document doc = Jsoup.connect(url).data(formData).timeout(TIMEOUT)
 		// .post();
 
-		Document doc = Jsoup.connect(url).data("subject", courseCode)
-				.data("Designation", "Any").data("catalognbr", "")
-				.data("CourseTime", "All").data("Component", "All")
-				.data("time", "").data("end_time", "").data("day", "m")
-				.data("day", "tu").data("day", "w").data("day", "th")
-				.data("day", "f").data("Campus", "Any")
-				.data("command", "search").maxBodySize(0).timeout(10 * 1000).post();
+		Document doc = Jsoup.connect(url)
+				.data("subject", courseCode)
+				.data("Designation", "Any")
+				.data("catalognbr", "")
+				.data("CourseTime", "All")
+				.data("Component", "All")
+				.data("time", "")
+				.data("end_time", "")
+				.data("day", "m")
+				.data("day", "tu")
+				.data("day", "w")
+				.data("day", "th")
+				.data("day", "f")
+				.data("Campus", "Any")
+				.data("command", "search").maxBodySize(0).timeout(30 * 1000).get();
 
+//		System.out.println(doc.toString());
 		return doc.toString();
 	}
 }
