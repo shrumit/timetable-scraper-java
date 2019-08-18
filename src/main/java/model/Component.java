@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Shrumit Mehta 2017
+ * Copyright (C) Shrumit Mehta 2019
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,8 +34,4 @@ public class Component {
 		sections = new ArrayList<Section>();
 	}
 
-	public void add(Section sec) {
-		if ((sec.name != null) && (sec.name.length() > 0) && (sec.timeslots.size() > 0))
-			sections.add(sec);
-	}
 }

@@ -31,7 +31,9 @@ public class DownloadWebpages {
 
 	static final String url = "http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
 	static final int TIMEOUT = 10 * 1000;
-
+	static final String folder = "dump";
+	static final int startIdx = 0;
+	
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// get list of subjects
@@ -39,9 +41,9 @@ public class DownloadWebpages {
 		Element subjectInput = doc.getElementById("inputSubject");
 		Elements subjectCodes = subjectInput.getElementsByTag("option");
 		System.out.println("Number of subjects:" + subjectCodes.size());
+
 		// download and store each subject's webpage
-		for (int i = 57; i < subjectCodes.size(); i++) {
-//			for (int i = 0; i < 3; i++) {
+		for (int i = startIdx; i < subjectCodes.size(); i++) {
 			String code = subjectCodes.get(i).val();
 			if (code.length() == 0)
 				continue;
@@ -58,7 +60,8 @@ public class DownloadWebpages {
 			}
 
 			// write to file
-			File file = new File("dump\\" + code);
+//			File file = new File(folder + "\\" + code); // WINDOWS
+			File file = new File(folder + "/" + code); // LINUX
 			file.createNewFile();
 			FileWriter fw = new FileWriter(file.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
