@@ -23,10 +23,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,10 +44,10 @@ import model.*;
 
 public class Main {
 
-	static final String inputDir = "dump_2019";
-	static final String outputView = "output_2019/master.json";
-	static final String outputSearch = "output_2019/search.json";
-	static final String outputCompute = "output_2019/compute.json";
+	static final String inputDir = "dump";
+	static final String outputView = "output/master.json";
+	static final String outputSearch = "output/search.json";
+	static final String outputCompute = "output/compute.json";
 
 	// Regex to shorten name
 	static final Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
@@ -153,10 +155,10 @@ public class Main {
 					String sectionName = td.get(0).text();
 					String compName = td.get(1).text();
 
-					if (!compMap.containsKey(compName)) {
+					if (!compMap.containsKey(compName)) { // encountered a new component
 						compMap.put(compName, new LinkedHashMap<String, Section>());
 					}
-					if (!compMap.get(compName).containsKey(sectionName)) {
+					if (!compMap.get(compName).containsKey(sectionName)) { // encountered a new section
 						Section section = new Section(sectionName);
 						section.number = td.get(2).text();
 						section.location = td.get(6).text();
@@ -167,12 +169,20 @@ public class Main {
 					// parse time
 					String startTime = td.get(4).text();
 					String endTime = td.get(5).text();
+
+					// fix exceptions
+					if (startTime.equals("7:00 AM"))
+						startTime = "8:00 AM";
+					if (endTime.equals("10:30 PM"))
+						endTime = "10:00 PM";
+
 					Elements days = td.get(3).getElementsByTag("td");
 					for (int j = 1; j < days.size(); j++) {
-						if (!days.get(j).text().equals("\u00a0"))
+						if (!days.get(j).text().equals("\u00a0")) {
 							compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1);
+						}
 					}
-				}
+				} // done parsing course
 
 				// remove empty sections and components
 				compMap.entrySet().removeIf(comp -> {
@@ -182,14 +192,15 @@ public class Main {
 					return comp.getValue().isEmpty();
 				});
 				
-				// store to course object
+				// convert map to Component objects and add to course
 				compMap.forEach((k, v) -> {
 					Component comp = new Component(k);
 					comp.sections.addAll(v.values());
 					course.components.add(comp);
 				});
-
-				courses.add(course);
+				
+				if (!course.components.isEmpty())
+					courses.add(course);
 			}
 		}
 		return courses;

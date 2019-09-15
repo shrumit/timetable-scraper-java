@@ -1,5 +1,6 @@
+
 /*
- * Copyright (C) Shrumit Mehta 2016
+ * Copyright (C) Shrumit Mehta 2019
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +34,7 @@ public class DownloadWebpages {
 	static final int TIMEOUT = 10 * 1000;
 	static final String folder = "dump";
 	static final int startIdx = 0;
-	
+
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// get list of subjects
@@ -52,9 +53,9 @@ public class DownloadWebpages {
 			String content = downloadCoursePage(code);
 
 			if (content.length() < 3000 && content.contains("captcha")) {
-				//System.out.println("Please solve captcha and try again.");
-				//return;
-				Thread.sleep(30*1000);
+				// System.out.println("Please solve captcha and try again.");
+				// return;
+				Thread.sleep(30 * 1000);
 				i--;
 				continue;
 			}
@@ -95,21 +96,10 @@ public class DownloadWebpages {
 		// Document doc = Jsoup.connect(url).data(formData).timeout(TIMEOUT)
 		// .post();
 
-		Document doc = Jsoup.connect(url)
-				.data("subject", courseCode)
-				.data("Designation", "Any")
-				.data("catalognbr", "")
-				.data("CourseTime", "All")
-				.data("Component", "All")
-				.data("time", "")
-				.data("end_time", "")
-				.data("day", "m")
-				.data("day", "tu")
-				.data("day", "w")
-				.data("day", "th")
-				.data("day", "f")
-				.data("Campus", "Any")
-				.data("command", "search").maxBodySize(0).timeout(30 * 1000).get();
+		Document doc = Jsoup.connect(url).data("subject", courseCode).data("Designation", "Any").data("catalognbr", "")
+				.data("CourseTime", "All").data("Component", "All").data("time", "").data("end_time", "")
+				.data("day", "m").data("day", "tu").data("day", "w").data("day", "th").data("day", "f")
+				.data("Campus", "Any").data("command", "search").maxBodySize(0).timeout(30 * 1000).get();
 
 //		System.out.println(doc.toString());
 		return doc.toString();
