@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Shrumit Mehta 2017
+ * Copyright (C) Shrumit Mehta 2019
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 package model;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import com.google.gson.annotations.Expose;
@@ -28,26 +27,17 @@ public class Course {
 	@Expose
 	public int id;
 	@Expose
-	public String text;
+	public String name;
 	public List<Component> components;
 
 	public Course() {
 		components = new ArrayList<Component>();
 	}
 
-	public void add(Component comp) {
-		// if component isn't unnamed or empty
-		if (!comp.name.equals("") && (comp.sections.size() > 0)) {
-			Iterator<Component> iterator = components.iterator();
-			// if same named Component exists then append sections to it
-			while (iterator.hasNext()) {
-				Component cur = iterator.next();
-				if (cur.name.equals(comp.name)) {
-					cur.sections.addAll(comp.sections);
-					return;
-				}
-			}
-			components.add(comp);
-		}
+	public Course(int id, String name) {
+		this.id = id;
+		this.name = name;
+		components = new ArrayList<Component>();
 	}
+
 }
