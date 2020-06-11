@@ -1,55 +1,20 @@
 # timetable-scraper-java
 
-*Scraper for the [UWO Undergraduate Academic Timetable](http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm)*
+*Scraper/parser for the [UWO Undergraduate Academic Timetable](http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm)*
+
 
 ## Usage
 
-1. Run `DownloadWebpages.java` to download every subject webpage to a local folder
-2. Run `Main.java` to scrape data from downloaded webpages
+This tool is intended to be run manually from the IDE.
 
-## Output
+1. In Eclipse, go to File > Import > General > Projects from Folder. Select the cloned repository.
 
-Output schema conforms to what is required by [Western Timetable Generator](https://github.com/shrumit/Western-Timetable-Maker), the only known consumer of this scraper. It should be fairly easy to modify it per your needs.
+2. Right-click on project name > Properties > Java Compiler > Java compliance level = 1.8. 
 
-### search.json
+3. Run `DownloadWebpages.java` to download every subject's webpage to a local folder
 
-```
-[
-	{
-		id: ,
-		text:
-	}
-]
-```
-### master.json
-```
-[
-	{
-		id: ,
-		text: ,
-		components: [
-			{
-				name:
-				sections: [
-					{
-						name: ,
-						timeslots: [
-							{
-								day: ,
-								start: ,
-								len: ,
-								timebit: ,
-								str1: ,
-								str2: ,
-								id:
-							}
-						]
-					}
-				]
-			}
-		]
-	}
-]
-```
+4. Run `Main.java` to scrape data from the downloaded webpages
 
-NB: This tool is designed for a one-time "snapshot" and should not be used for real-time/frequent data scraping.
+## See also
+
+Output from this program is consumed by [Western Timetable Generator](https://github.com/shrumit/Western-Timetable-Maker).
