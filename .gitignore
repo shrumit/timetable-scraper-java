@@ -7,5 +7,5 @@ target/
 dump*
 master*
 search*
-output/
+output*
 /bin/

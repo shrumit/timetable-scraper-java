@@ -21,8 +21,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
@@ -32,7 +32,7 @@ public class DownloadWebpages {
 
 	static final String url = "http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
 	static final int TIMEOUT = 10 * 1000;
-	static final String folder = "dump";
+	static final String folderPrefix = "dump";
 	static final int startIdx = 0;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
@@ -43,6 +43,14 @@ public class DownloadWebpages {
 		Elements subjectCodes = subjectInput.getElementsByTag("option");
 		System.out.println("Number of subjects:" + subjectCodes.size());
 
+		String dirname = folderPrefix + dateString();
+		
+	    File dir = new File(dirname);
+	    if (!dir.exists()){
+	    	System.out.println("Created directory:" + dir.getCanonicalPath());
+	        dir.mkdir();
+	    }
+		
 		// download and store each subject's webpage
 		for (int i = startIdx; i < subjectCodes.size(); i++) {
 			String code = subjectCodes.get(i).val();
@@ -53,8 +61,7 @@ public class DownloadWebpages {
 			String content = downloadCoursePage(code);
 
 			if (content.length() < 3000 && content.contains("captcha")) {
-				// System.out.println("Please solve captcha and try again.");
-				// return;
+				System.out.println("Captcha");
 				Thread.sleep(30 * 1000);
 				i--;
 				continue;
@@ -62,7 +69,7 @@ public class DownloadWebpages {
 
 			// write to file
 //			File file = new File(folder + "\\" + code); // WINDOWS
-			File file = new File(folder + "/" + code); // LINUX
+			File file = new File(dirname + "/" + code); // LINUX
 			file.createNewFile();
 			FileWriter fw = new FileWriter(file.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
@@ -73,29 +80,10 @@ public class DownloadWebpages {
 //			Thread.sleep(2000);
 		}
 		System.out.println("Finished.");
+		System.out.println("Dirname:" + dirname);
 	}
 
 	static String downloadCoursePage(String courseCode) throws IOException {
-
-		/* This doesn't work for some reason */
-		// Map<String, String> formData = new HashMap<>();
-		// formData.put("subject", courseCode);
-		// formData.put("Designation", "Any");
-		// formData.put("catalognbr", "");
-		// formData.put("CourseTime", "All");
-		// formData.put("Component", "All");
-		// formData.put("time", "");
-		// formData.put("end_time", "");
-		// formData.put("day", "m");
-		// formData.put("day", "tu");
-		// formData.put("day", "w");
-		// formData.put("day", "th");
-		// formData.put("day", "f");
-		// formData.put("Campus", "Any");
-		// formData.put("command", "search");
-		// Document doc = Jsoup.connect(url).data(formData).timeout(TIMEOUT)
-		// .post();
-
 		Document doc = Jsoup.connect(url).data("subject", courseCode).data("Designation", "Any").data("catalognbr", "")
 				.data("CourseTime", "All").data("Component", "All").data("time", "").data("end_time", "")
 				.data("day", "m").data("day", "tu").data("day", "w").data("day", "th").data("day", "f")
@@ -104,4 +92,11 @@ public class DownloadWebpages {
 //		System.out.println(doc.toString());
 		return doc.toString();
 	}
+	
+	public static String dateString() {
+	    LocalDate today = LocalDate.now();
+	    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd_MM_yyyy");
+	    return today.format(formatter);		
+	}
+
 }

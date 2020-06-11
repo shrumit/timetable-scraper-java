@@ -86,6 +86,7 @@ public class Section {
 	private int convertStringToInterval(String str) {
 		int total = 0;
 		String[] one = str.split(" ");
+		
 		if (one[1].equals("PM"))
 			total += 24;
 		String[] two = one[0].split(":");

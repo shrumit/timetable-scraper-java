@@ -21,14 +21,12 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,11 +42,14 @@ import model.*;
 
 public class Main {
 
-	static final String inputDir = "dump";
-	static final String outputView = "output/master.json";
-	static final String outputSearch = "output/search.json";
-	static final String outputCompute = "output/compute.json";
-
+	static final String inputDirName = "dump10_06_2020";
+	static final String outputDirName = inputDirName.replace("dump", "output");
+	
+	static final String outputView = "master.json";
+	static final String outputSearch = "search.json";
+	static final String outputCompute = "compute.json";
+	
+	
 	// Regex to shorten name
 	static final Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
 	// Regex for selecting course code suffix
@@ -59,7 +60,7 @@ public class Main {
 		long time_start = System.nanoTime();
 
 		// Retrieve files in directory
-		File dir = new File(inputDir);
+		File dir = new File(inputDirName);
 		File[] fileList = dir.listFiles();
 		System.out.println("Number of files:" + fileList.length);
 
@@ -74,12 +75,12 @@ public class Main {
 		produceComputeData(courses, outputCompute);
 
 		long time_end = System.nanoTime();
-		System.out.println("Scrapped " + courses.size() + " courses in " + (time_end - time_start) / 1000000 + "ms");
+		System.out.println("Parsed " + courses.size() + " courses in " + (time_end - time_start) / 1000000 + "ms");
 	}
 
 	private static void produceViewData(List<Course> courses, String filename) throws IOException {
 		Gson gson = new Gson();
-		writeToFile(gson.toJson(courses), filename);
+		writeToFile(gson.toJson(courses), outputDirName, filename);
 	}
 
 	private static void produceSearchData(List<Course> courses, String filename) throws IOException {
@@ -113,7 +114,7 @@ public class Main {
 				System.out.println("Unexpected suffix: " + course.name);
 		}
 
-		writeToFile("[" + termA.toString() + "," + termB.toString() + "]", filename);
+		writeToFile("[" + termA.toString() + "," + termB.toString() + "]", outputDirName, filename);
 	}
 
 	private static void produceComputeData(List<Course> courses, String filename) throws IOException {
@@ -127,7 +128,7 @@ public class Main {
 		}
 		System.out.println("Final compute map size:" + map.size());
 		Gson gson = new Gson();
-		writeToFile(gson.toJson(map), filename);
+		writeToFile(gson.toJson(map), outputDirName, filename);
 	}
 
 	private static List<Course> extractCourses(Document[] docList) {
@@ -143,6 +144,7 @@ public class Main {
 			// for each course in file
 			for (int i = 0; i < names.size(); i++) {
 				Course course = new Course(courses.size(), names.get(i).text());
+				System.out.println("Parsing course:" + course.name);
 				Elements rows = tables.get(i).select("tbody").first().select("> tr");
 
 				Map<String, Map<String, Section>> compMap = new LinkedHashMap<>();
@@ -152,8 +154,8 @@ public class Main {
 
 					// parse names
 					Elements td = row.select("> td");
-					String sectionName = td.get(0).text();
 					String compName = td.get(1).text();
+					String sectionName = td.get(0).text();
 
 					if (!compMap.containsKey(compName)) { // encountered a new component
 						compMap.put(compName, new LinkedHashMap<String, Section>());
@@ -167,16 +169,20 @@ public class Main {
 					}
 
 					// parse time
-					String startTime = td.get(4).text();
-					String endTime = td.get(5).text();
+					String startTime = td.get(4).text().trim();
+					String endTime = td.get(5).text().trim();
 
+					if (startTime.length() == 0 || endTime.length() == 0)
+						continue;
+					
 					// fix exceptions
 					if (startTime.equals("7:00 AM"))
 						startTime = "8:00 AM";
 					if (endTime.equals("10:30 PM"))
 						endTime = "10:00 PM";
-
+					
 					Elements days = td.get(3).getElementsByTag("td");
+					// figure out which days are being selected
 					for (int j = 1; j < days.size(); j++) {
 						if (!days.get(j).text().equals("\u00a0")) {
 							compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1);
@@ -206,8 +212,14 @@ public class Main {
 		return courses;
 	}
 
-	private static void writeToFile(String body, String filename) throws IOException {
-		File output = new File(filename);
+	private static void writeToFile(String body, String dirname, String filename) throws IOException {
+	    File dir = new File(dirname);
+	    if (!dir.exists()){
+	    	System.out.println("Created directory:" + dir.getCanonicalPath());
+	        dir.mkdir();
+	    }
+		
+		File output = new File(dirname+ "/" + filename);
 		if (!output.exists()) {
 			output.createNewFile();
 		}
