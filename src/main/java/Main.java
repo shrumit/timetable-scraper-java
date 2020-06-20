@@ -23,6 +23,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,14 +43,14 @@ import model.*;
 
 public class Main {
 
-	static final String inputDirName = "dump10_06_2020";
-	static final String outputDirName = inputDirName.replace("dump", "output");
-	
+	static final String inputDirName = "dump18_06_2020";
+	static final String outputDirName = inputDirName.replace("dump", "coutput");
+
 	static final String outputView = "master.json";
 	static final String outputSearch = "search.json";
 	static final String outputCompute = "compute.json";
-	
-	
+	static final String outputMetadata = "metadata.json";
+
 	// Regex to shorten name
 	static final Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
 	// Regex for selecting course code suffix
@@ -72,10 +73,17 @@ public class Main {
 
 		produceViewData(courses, outputView);
 		produceSearchData(courses, outputSearch);
-		produceComputeData(courses, outputCompute);
-
+//		produceComputeData(courses, outputCompute);
+		produceMetadata(outputMetadata);
+		
 		long time_end = System.nanoTime();
 		System.out.println("Parsed " + courses.size() + " courses in " + (time_end - time_start) / 1000000 + "ms");
+	}
+	
+	private static void produceMetadata(String filename) throws IOException {
+		Gson gson = new Gson();
+		Metadata metadata = new Metadata();
+		writeToFile(gson.toJson(metadata), outputDirName, filename);
 	}
 
 	private static void produceViewData(List<Course> courses, String filename) throws IOException {
@@ -165,6 +173,7 @@ public class Main {
 						section.number = td.get(2).text();
 						section.location = td.get(6).text();
 						section.instructor = td.get(7).text();
+						section.campus = td.get(10).text();
 						compMap.get(compName).put(sectionName, section);
 					}
 
@@ -174,13 +183,13 @@ public class Main {
 
 					if (startTime.length() == 0 || endTime.length() == 0)
 						continue;
-					
+
 					// fix exceptions
 					if (startTime.equals("7:00 AM"))
 						startTime = "8:00 AM";
 					if (endTime.equals("10:30 PM"))
 						endTime = "10:00 PM";
-					
+
 					Elements days = td.get(3).getElementsByTag("td");
 					// figure out which days are being selected
 					for (int j = 1; j < days.size(); j++) {
@@ -197,14 +206,14 @@ public class Main {
 					});
 					return comp.getValue().isEmpty();
 				});
-				
+
 				// convert map to Component objects and add to course
 				compMap.forEach((k, v) -> {
 					Component comp = new Component(k);
 					comp.sections.addAll(v.values());
 					course.components.add(comp);
 				});
-				
+
 				if (!course.components.isEmpty())
 					courses.add(course);
 			}
@@ -213,13 +222,13 @@ public class Main {
 	}
 
 	private static void writeToFile(String body, String dirname, String filename) throws IOException {
-	    File dir = new File(dirname);
-	    if (!dir.exists()){
-	    	System.out.println("Created directory:" + dir.getCanonicalPath());
-	        dir.mkdir();
-	    }
-		
-		File output = new File(dirname+ "/" + filename);
+		File dir = new File(dirname);
+		if (!dir.exists()) {
+			System.out.println("Created directory:" + dir.getCanonicalPath());
+			dir.mkdir();
+		}
+
+		File output = new File(dirname + "/" + filename);
 		if (!output.exists()) {
 			output.createNewFile();
 		}

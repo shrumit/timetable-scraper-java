@@ -26,6 +26,7 @@ public class Section {
 	public String number;
 	public String location;
 	public String instructor;
+	public String campus;
 	public String timeShort;
 	public String timeFull;
 	public int[][] timeslots; // stores start time and and length per day
@@ -35,14 +36,15 @@ public class Section {
 	public int[] timebits;
 
 	public Section(String name) {
-		this(name, "", "", "");
+		this(name, "", "", "","");
 	}
 
-	public Section(String name, String number, String location, String instructor) {
+	public Section(String name, String number, String location, String instructor, String campus) {
 		this.name = name;
 		this.number = number;
 		this.location = location;
 		this.instructor = instructor;
+		this.campus = campus;
 		this.timeShort = "";
 		this.timeFull = "";
 		timeslots = new int[5][2];
