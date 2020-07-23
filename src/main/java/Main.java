@@ -43,7 +43,7 @@ import model.*;
 
 public class Main {
 
-	static final String inputDirName = "dump18_06_2020";
+	static final String inputDirName = "dump22_07_2020";
 	static final String outputDirName = inputDirName.replace("dump", "coutput");
 
 	static final String outputView = "master.json";
@@ -145,8 +145,7 @@ public class Main {
 			Elements names = doc.getElementsByTag("h4");
 			Elements tables = doc.getElementsByClass("table-striped");
 			if (names.size() != tables.size()) {
-				System.out.println("Size mismatch.");
-				return null;
+				throw new RuntimeException("Size mismatch");
 			}
 
 			// for each course in file

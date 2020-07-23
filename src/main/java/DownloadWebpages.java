@@ -36,6 +36,7 @@ public class DownloadWebpages {
 	static final int startIdx = 0;
 
 	public static void main(String[] args) throws IOException, InterruptedException {
+		long time_start = System.nanoTime();
 
 		// get list of subjects
 		Document doc = Jsoup.connect(url).get();
@@ -81,6 +82,8 @@ public class DownloadWebpages {
 		}
 		System.out.println("Finished.");
 		System.out.println("Dirname:" + dirname);
+		long time_end = System.nanoTime();
+		System.out.println((time_end - time_start) / 6e+10 + "minutes");
 	}
 
 	static String downloadCoursePage(String courseCode) throws IOException {
