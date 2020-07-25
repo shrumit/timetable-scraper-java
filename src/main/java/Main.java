@@ -17,6 +17,8 @@
  *
  */
 
+package timetable_scraper_java;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -39,7 +41,7 @@ import org.jsoup.select.Elements;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import model.*;
+import timetable_scraper_java.model.*;
 
 public class Main {
 
@@ -75,11 +77,11 @@ public class Main {
 		produceSearchData(courses, outputSearch);
 //		produceComputeData(courses, outputCompute);
 		produceMetadata(outputMetadata);
-		
+
 		long time_end = System.nanoTime();
 		System.out.println("Parsed " + courses.size() + " courses in " + (time_end - time_start) / 1000000 + "ms");
 	}
-	
+
 	private static void produceMetadata(String filename) throws IOException {
 		Gson gson = new Gson();
 		Metadata metadata = new Metadata();

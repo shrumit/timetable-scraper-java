@@ -1,21 +1,23 @@
 
 /*
  * Copyright (C) Shrumit Mehta 2019
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
+package timetable_scraper_java;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -45,13 +47,13 @@ public class DownloadWebpages {
 		System.out.println("Number of subjects:" + subjectCodes.size());
 
 		String dirname = folderPrefix + dateString();
-		
+
 	    File dir = new File(dirname);
 	    if (!dir.exists()){
 	    	System.out.println("Created directory:" + dir.getCanonicalPath());
 	        dir.mkdir();
 	    }
-		
+
 		// download and store each subject's webpage
 		for (int i = startIdx; i < subjectCodes.size(); i++) {
 			String code = subjectCodes.get(i).val();
@@ -95,11 +97,11 @@ public class DownloadWebpages {
 //		System.out.println(doc.toString());
 		return doc.toString();
 	}
-	
+
 	public static String dateString() {
 	    LocalDate today = LocalDate.now();
 	    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd_MM_yyyy");
-	    return today.format(formatter);		
+	    return today.format(formatter);
 	}
 
 }

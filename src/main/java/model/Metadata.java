@@ -1,4 +1,4 @@
-package model;
+package timetable_scraper_java.model;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
