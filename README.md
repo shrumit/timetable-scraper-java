@@ -5,15 +5,17 @@
 
 ## Usage
 
-This tool is intended to be run manually from the IDE.
+1. Install prerequisites:
 
-1. In Eclipse, go to File > Import > General > Projects from Folder. Select the cloned repository.
+	* Java version 17.0.1+
 
-2. Right-click on project name > Properties > Java Compiler > Java compliance level = 1.8. 
+	* Maven version 3.8.4+
 
-3. Run `DownloadWebpages.java` to download every subject's webpage to a local folder
+2. Clone repo.
 
-4. Run `Main.java` to scrape data from the downloaded webpages
+3.  Run `mvn package` in the root.
+
+4. Run `java -jar target/timetable-scraper-java-1.0-SNAPSHOT-jar-with-dependencies.jar` to scrape!
 
 ## See also
 
