@@ -10,9 +10,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class CoursePageDownloader {
 
@@ -24,20 +23,26 @@ public class CoursePageDownloader {
     static final long CAPTCHA_SLEEP_SECONDS = 30;
     static final String folderPrefix = "dump";
 
-    public static String download() throws Exception {
+    Logger logger;
+
+    public CoursePageDownloader(Logger logger) {
+        this.logger = logger;
+    }
+
+    public String download(String runId) throws Exception {
         long time_start = System.nanoTime();
 
         // get list of subjects
         Document doc = Jsoup.connect(url).get();
         Element subjectInput = doc.getElementById("inputSubject");
         Elements subjectCodes = subjectInput.getElementsByTag("option");
-        TraceWriter.trace("Number of subjects:" + subjectCodes.size());
+        logger.info("Number of subjects:" + subjectCodes.size());
 
-        String dirname = folderPrefix + dateString();
+        String dirname = folderPrefix + runId;
 
         File dir = new File(dirname);
         if (!dir.exists()){
-            TraceWriter.trace("Created directory:" + dir.getCanonicalPath());
+            logger.info("Created directory:" + dir.getCanonicalPath());
             dir.mkdir();
         }
 
@@ -47,17 +52,16 @@ public class CoursePageDownloader {
             if (code.length() == 0)
                 continue;
 
-            TraceWriter.trace("Attempting:" + i + ":" + code);
+            logger.info("Attempting:" + i + ":" + code);
             String content = "";
             boolean success = false;
-            for (int retry = 0; i < 5; i++) {
+            for (int retry = 0; retry < 5; retry++) {
                 try {
                     content = downloadCoursePage(code);
                     success = true;
-                } catch (SocketTimeoutException e) {
-                    TraceWriter.trace("Socket timeout exception. Retrying");
-                } finally {
                     break;
+                } catch (SocketTimeoutException e) {
+                    logger.info("Socket timeout exception. Retrying");
                 }
             }
             if (!success) {
@@ -65,7 +69,7 @@ public class CoursePageDownloader {
             }
 
             if (content.length() < 3000 && content.contains("captcha")) {
-                TraceWriter.trace("Captcha. Sleeping " + CAPTCHA_SLEEP_SECONDS + " seconds.");
+                logger.info("Captcha. Sleeping " + CAPTCHA_SLEEP_SECONDS + " seconds.");
                 Thread.sleep(TimeUnit.SECONDS.toMillis(CAPTCHA_SLEEP_SECONDS));
                 i--; // retry same i
                 continue;
@@ -80,28 +84,22 @@ public class CoursePageDownloader {
             bw.write(content);
             bw.close(); // also closes fw
 
-            TraceWriter.trace("Downloaded:" + i + ":" + code + " to " + file.getCanonicalPath());
+            logger.info("Downloaded:" + i + ":" + code + " to " + file.getCanonicalPath());
         }
-        TraceWriter.trace("Finished. Dirname:" + dirname);
+        logger.info("Finished. Dirname:" + dirname);
 
         long time_end = System.nanoTime();
-        TraceWriter.trace(TimeUnit.NANOSECONDS.toMinutes(time_end - time_start) + " minutes");
+        logger.info(TimeUnit.NANOSECONDS.toMinutes(time_end - time_start) + " minutes");
 
         return dirname;
     }
 
-    private static String downloadCoursePage(String courseCode) throws IOException {
+    private String downloadCoursePage(String courseCode) throws IOException {
         Document doc = Jsoup.connect(url).data("subject", courseCode).data("Designation", "Any").data("catalognbr", "")
                 .data("CourseTime", "All").data("Component", "All").data("time", "").data("end_time", "")
                 .data("day", "m").data("day", "tu").data("day", "w").data("day", "th").data("day", "f")
                 .data("Campus", "Any").data("command", "search").timeout(0).maxBodySize(0).get();
 
-//		TraceWriter.write(doc.toString());
         return doc.toString();
-    }
-
-    private static String dateString() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd_MM_yyyy_HHMM");
-        return LocalDateTime.now().format(formatter);
     }
 }

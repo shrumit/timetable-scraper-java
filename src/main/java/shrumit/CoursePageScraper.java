@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,7 +34,13 @@ public class CoursePageScraper {
     // Regex for selecting course code suffix
     static final Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
 
-    public static String scrape(String inputDirName) throws IOException {
+    Logger logger;
+
+    public CoursePageScraper(Logger logger) {
+        this.logger = logger;
+    }
+
+    public String scrape(String inputDirName) throws IOException {
         long time_start = System.nanoTime();
 
         if (inputDirName == null) {
@@ -45,7 +52,7 @@ public class CoursePageScraper {
         // Retrieve files in directory
         File dir = new File(inputDirName);
         File[] fileList = dir.listFiles();
-        TraceWriter.trace("Number of files:" + fileList.length);
+        logger.info("Number of files:" + fileList.length);
 
         Document[] docList = new Document[fileList.length];
         for (int i = 0; i < fileList.length; i++)
@@ -59,24 +66,24 @@ public class CoursePageScraper {
         produceMetadata(outputMetadata, outputDirname);
 
         long time_end = System.nanoTime();
-        TraceWriter.trace("Parsed " + courses.size() + " courses in " + TimeUnit.NANOSECONDS.toMinutes(time_end-time_start) + " seconds");
+        logger.info("Parsed " + courses.size() + " courses in " + TimeUnit.NANOSECONDS.toMinutes(time_end-time_start) + " seconds");
 
         return outputDirname;
 
     }
 
-    private static void produceMetadata(String filename, String outputDirName) throws IOException {
+    private void produceMetadata(String filename, String outputDirName) throws IOException {
         Gson gson = new Gson();
         Metadata metadata = new Metadata();
         writeToFile(gson.toJson(metadata), outputDirName, filename);
     }
 
-    private static void produceViewData(List<Course> courses, String filename, String outputDirName) throws IOException {
+    private void produceViewData(List<Course> courses, String filename, String outputDirName) throws IOException {
         Gson gson = new Gson();
         writeToFile(gson.toJson(courses), outputDirName, filename);
     }
 
-    private static void produceSearchData(List<Course> courses, String filename, String outputDirName) throws IOException {
+    private void produceSearchData(List<Course> courses, String filename, String outputDirName) throws IOException {
         Gson gsonX = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         StringJoiner termA = new StringJoiner(",", "[", "]");
         StringJoiner termB = new StringJoiner(",", "[", "]");
@@ -104,13 +111,13 @@ public class CoursePageScraper {
                 termA.add(gsonX.toJson(course));
                 termB.add(gsonX.toJson(course));
             } else
-                TraceWriter.trace("Unexpected suffix: " + course.name);
+                logger.info("Unexpected suffix: " + course.name);
         }
 
         writeToFile("[" + termA.toString() + "," + termB.toString() + "]", outputDirName, filename);
     }
 
-    private static void produceComputeData(List<Course> courses, String filename, String outputDirName) throws IOException {
+    private void produceComputeData(List<Course> courses, String filename, String outputDirName) throws IOException {
         Map<String, int[]> map = new LinkedHashMap<>();
         for (Course course : courses) {
             for (int i = 0; i < course.components.size(); i++) {
@@ -119,12 +126,12 @@ public class CoursePageScraper {
                 }
             }
         }
-        TraceWriter.trace("Final compute map size:" + map.size());
+        logger.info("Final compute map size:" + map.size());
         Gson gson = new Gson();
         writeToFile(gson.toJson(map), outputDirName, filename);
     }
 
-    private static List<Course> extractCourses(Document[] docList) {
+    private List<Course> extractCourses(Document[] docList) {
         List<Course> courses = new ArrayList<>();
         for (Document doc : docList) {
             Elements names = doc.getElementsByTag("h4");
@@ -136,7 +143,7 @@ public class CoursePageScraper {
             // for each course in file
             for (int i = 0; i < names.size(); i++) {
                 Course course = new Course(courses.size(), names.get(i).text());
-                TraceWriter.trace("Parsing course:" + course.name);
+                logger.info("Parsing course:" + course.name);
                 Elements rows = tables.get(i).select("tbody").first().select("> tr");
 
                 Map<String, Map<String, Section>> compMap = new LinkedHashMap<>();
@@ -212,10 +219,10 @@ public class CoursePageScraper {
         return courses;
     }
 
-    private static void writeToFile(String body, String dirname, String filename) throws IOException {
+    private void writeToFile(String body, String dirname, String filename) throws IOException {
         File dir = new File(dirname);
         if (!dir.exists()) {
-            TraceWriter.trace("Created directory:" + dir.getCanonicalPath());
+            logger.info("Created directory:" + dir.getCanonicalPath());
             dir.mkdir();
         }
 

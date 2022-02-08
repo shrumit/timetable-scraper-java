@@ -10,3 +10,5 @@ search*
 output*
 coutput*
 /bin/
+.idea/
+*.log
