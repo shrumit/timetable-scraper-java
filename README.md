@@ -5,17 +5,12 @@
 
 ## Usage
 
-1. Install prerequisites:
+Container:
 
-	* Java version 17.0.1+
-
-	* Maven version 3.8.4+
-
-2. Clone repo.
-
-3.  Run `mvn package` in the root.
-
-4. Run `java -jar target/timetable-scraper-java-1.0-SNAPSHOT-jar-with-dependencies.jar` to scrape!
+1. Run `docker build . -t timetable-scraper-java:latest` in the repo root.
+2. Make a new directory somewhere and `cd` into it.
+3. `docker run -it -v ${pwd}:/execution tsj:latest`
+4. The scraper's output will appear in `pwd`.
 
 ## See also
 

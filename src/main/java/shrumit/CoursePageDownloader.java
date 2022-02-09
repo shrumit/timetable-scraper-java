@@ -76,8 +76,7 @@ public class CoursePageDownloader {
             }
 
             // write to file
-			File file = new File(dirname + "\\" + code); // WINDOWS
-//            File file = new File(dirname + "/" + code); // LINUX
+			File file = new File(dirname + File.separator + code); // WINDOWS
             file.createNewFile();
             FileWriter fw = new FileWriter(file.getCanonicalPath());
             BufferedWriter bw = new BufferedWriter(fw);
