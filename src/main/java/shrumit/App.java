@@ -12,14 +12,11 @@ public class App
     public static void main( String[] args ) throws IOException {
         System.out.println("Hello World!");
 
-        String runId = dateTimeString();
+        String runId = args.length == 0 ? dateTimeString() : args[0];
         System.out.println(runId);
 
-        Logger logger = Logger.getLogger(runId);
-        var fileHandler = new FileHandler(runId + ".log");
-        fileHandler.setFormatter(new SimpleFormatter());
-        logger.addHandler(fileHandler);
-        logger.info("Logger started");
+        Logger logger = createLogger(runId);
+        logger.info("Logger started. runId:" + runId);
 
         String dirname = null;
         try {
@@ -48,5 +45,13 @@ public class App
     private static String dateTimeString() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd_MM_yyyy_HHmm");
         return LocalDateTime.now().format(formatter);
+    }
+
+    private static Logger createLogger(String runId) throws IOException {
+        Logger logger = Logger.getLogger(runId);
+        var fileHandler = new FileHandler(runId + ".log");
+        fileHandler.setFormatter(new SimpleFormatter());
+        logger.addHandler(fileHandler);
+        return logger;
     }
 }
