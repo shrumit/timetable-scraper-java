@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,8 @@ public class CoursePageScraper {
         // Retrieve files in directory
         File dir = new File(inputDirName);
         File[] fileList = dir.listFiles();
+        Arrays.sort(fileList);
+
         logger.info("Number of files:" + fileList.length);
 
         Document[] docList = new Document[fileList.length];
