@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.FileHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
@@ -23,8 +24,7 @@ public class App
             CoursePageDownloader downloader = new CoursePageDownloader(logger);
             dirname = downloader.download(runId);
         } catch (Exception e) {
-            logger.severe("Exception calling CoursePageDownloader.download()");
-            e.printStackTrace(System.out);
+            logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.download(): " + e.getMessage(), e);
             System.exit(1);
         }
 
@@ -32,8 +32,7 @@ public class App
             CoursePageScraper scraper = new CoursePageScraper(logger);
             scraper.scrape(dirname);
         } catch (Exception e) {
-            logger.severe("Exception calling CoursePageDownloader.scrape()");
-            e.printStackTrace(System.out);
+            logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
             System.exit(1);
         }
 

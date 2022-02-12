@@ -65,7 +65,7 @@ public class CoursePageScraper {
 
         produceViewData(courses, outputView, outputDirname);
         produceSearchData(courses, outputSearch, outputDirname);
-//		produceComputeData(courses, outputCompute, outputDirName);
+//        produceComputeData(courses, outputCompute, outputDirName);
         produceMetadata(outputMetadata, outputDirname);
 
         long time_end = System.nanoTime();
@@ -193,7 +193,7 @@ public class CoursePageScraper {
                         try {
                             compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1);
                         } catch (Exception e) {
-                            System.out.println(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s",
+                            logger.severe(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s",
                                     course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));
                             throw e;
                         }

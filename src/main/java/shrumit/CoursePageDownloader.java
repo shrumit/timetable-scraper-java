@@ -61,7 +61,7 @@ public class CoursePageDownloader {
                     success = true;
                     break;
                 } catch (SocketTimeoutException e) {
-                    logger.info("Socket timeout exception. Retrying");
+                    logger.info("Socket timeout exception. Retrying. " + e.getMessage());
                 }
             }
             if (!success) {
@@ -76,7 +76,7 @@ public class CoursePageDownloader {
             }
 
             // write to file
-			File file = new File(dirname + File.separator + code); // WINDOWS
+            File file = new File(dirname + File.separator + code);
             file.createNewFile();
             FileWriter fw = new FileWriter(file.getCanonicalPath());
             BufferedWriter bw = new BufferedWriter(fw);
