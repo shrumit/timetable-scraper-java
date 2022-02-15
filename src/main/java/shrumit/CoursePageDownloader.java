@@ -1,5 +1,6 @@
 package shrumit;
 
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -61,7 +62,9 @@ public class CoursePageDownloader {
                     success = true;
                     break;
                 } catch (SocketTimeoutException e) {
-                    logger.info("Socket timeout exception. Retrying. " + e.getMessage());
+                    logger.info("SocketTimeoutException. Retrying. " + e.getMessage());
+                } catch (HttpStatusException e) {
+                    logger.info("HttpStatusException. Retrying. " + e.getMessage());
                 }
             }
             if (!success) {

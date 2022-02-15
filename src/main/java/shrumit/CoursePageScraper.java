@@ -113,8 +113,9 @@ public class CoursePageScraper {
                     || suffix.equals("U")) {
                 termA.add(gsonX.toJson(course));
                 termB.add(gsonX.toJson(course));
-            } else
-                logger.info("Unexpected suffix: " + course.name);
+            } else {
+                throw new  IllegalArgumentException("Unexpected suffix: " + course.name);
+            }
         }
 
         writeToFile("[" + termA.toString() + "," + termB.toString() + "]", outputDirName, filename);
