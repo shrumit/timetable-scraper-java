@@ -1,5 +1,6 @@
 package shrumit;
 
+import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -20,7 +21,7 @@ public class CoursePageDownloader {
     static final int startIdx = 0;
     static final int limit = Integer.MAX_VALUE;
 
-    static final String url = "http://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
+    static final String url = "https://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
     static final long CAPTCHA_SLEEP_SECONDS = 30;
     static final String folderPrefix = "dump";
 
@@ -97,11 +98,11 @@ public class CoursePageDownloader {
     }
 
     private String downloadCoursePage(String courseCode) throws IOException {
-        Document doc = Jsoup.connect(url).data("subject", courseCode).data("Designation", "Any").data("catalognbr", "")
-                .data("CourseTime", "All").data("Component", "All").data("time", "").data("end_time", "")
-                .data("day", "m").data("day", "tu").data("day", "w").data("day", "th").data("day", "f")
-                .data("Campus", "Any").data("command", "search").timeout(0).maxBodySize(0).get();
+        Connection connection = Jsoup.connect(url).timeout(0).maxBodySize(0);
+        connection.request().requestBody(
+                String.format("subject=%s&Designation=Any&catalognbr=&CourseTime=All&Component=All&time=&end_time=&day=m&day=tu&day=w&day=th&day=f&LocationCode=Any&command=search",
+                courseCode));
 
-        return doc.toString();
+        return connection.post().toString();
     }
 }
