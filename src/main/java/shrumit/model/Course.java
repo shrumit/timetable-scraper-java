@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.google.gson.annotations.Expose;
 
-public class Course {
+public class Course implements Comparable<Course> {
     @Expose
     public int id;
     @Expose
@@ -22,4 +22,8 @@ public class Course {
         components = new ArrayList<Component>();
     }
 
+    @Override
+    public int compareTo(Course o) {
+        return name.compareTo(o.name);
+    }
 }

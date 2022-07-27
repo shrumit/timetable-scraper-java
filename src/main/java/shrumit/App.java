@@ -29,8 +29,7 @@ public class App
         }
 
         try {
-            CoursePageScraper scraper = new CoursePageScraper(logger);
-            scraper.scrape(dirname);
+            DirectoryReader.parse(dirname, logger);
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
             System.exit(1);

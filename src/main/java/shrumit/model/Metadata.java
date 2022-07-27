@@ -10,4 +10,8 @@ public class Metadata {
         time = now.format(DateTimeFormatter.RFC_1123_DATE_TIME);
         System.out.println(time);
     }
+
+    public static Metadata now() {
+        return new Metadata();
+    }
 }
