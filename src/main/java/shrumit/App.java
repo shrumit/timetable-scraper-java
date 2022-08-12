@@ -10,6 +10,14 @@ import java.util.logging.SimpleFormatter;
 
 public class App
 {
+
+    static final String outputView = "master.json";
+    static final String outputSearch = "search.json";
+    static final String outputMetadata = "metadata.json";
+
+    static final String storageDirPrefix = "dump";
+    static final String outputDirPrefix = "coutput";
+
     public static void main( String[] args ) throws IOException {
         System.out.println("Hello World!");
 
@@ -19,17 +27,21 @@ public class App
         Logger logger = createLogger(runId);
         logger.info("Logger started. runId:" + runId);
 
-        String dirname = null;
+        String storageDir = storageDirPrefix + runId;
+        String outputDir = outputDirPrefix + runId;
+
+
         try {
-            CoursePageDownloader downloader = new CoursePageDownloader(logger);
-            dirname = downloader.download(runId);
+            CoursePageDownloader downloader = new CoursePageDownloader(logger, storageDir);
+            downloader.download(runId);
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.download(): " + e.getMessage(), e);
             System.exit(1);
         }
 
         try {
-            DirectoryReader.parse(dirname, logger);
+            DirectoryReader dr = new DirectoryReader(logger);
+            dr.parse(storageDir, outputDir, outputView, outputSearch, outputMetadata);
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
             System.exit(1);

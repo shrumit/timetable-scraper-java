@@ -21,28 +21,28 @@ public class CoursePageDownloader {
     static final int startIdx = 0;
     static final int limit = Integer.MAX_VALUE;
 
-    static final String url = "https://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
+    static final String URL = "https://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
     static final long CAPTCHA_SLEEP_SECONDS = 30;
-    static final String folderPrefix = "dump";
+
 
     Logger logger;
+    String storageDir;
 
-    public CoursePageDownloader(Logger logger) {
+    public CoursePageDownloader(Logger logger, String storageDir) {
         this.logger = logger;
+        this.storageDir = storageDir;
     }
 
-    public String download(String runId) throws Exception {
+    public void download(String runId) throws Exception {
         long time_start = System.nanoTime();
 
         // get list of subjects
-        Document doc = Jsoup.connect(url).get();
+        Document doc = Jsoup.connect(URL).get();
         Element subjectInput = doc.getElementById("inputSubject");
         Elements subjectCodes = subjectInput.getElementsByTag("option");
         logger.info("Number of subjects:" + subjectCodes.size());
 
-        String dirname = folderPrefix + runId;
-
-        File dir = new File(dirname);
+        File dir = new File(storageDir);
         if (!dir.exists()){
             logger.info("Created directory:" + dir.getCanonicalPath());
             dir.mkdir();
@@ -80,7 +80,7 @@ public class CoursePageDownloader {
             }
 
             // write to file
-            File file = new File(dirname + File.separator + code);
+            File file = new File(storageDir + File.separator + code);
             file.createNewFile();
             FileWriter fw = new FileWriter(file.getCanonicalPath());
             BufferedWriter bw = new BufferedWriter(fw);
@@ -89,16 +89,14 @@ public class CoursePageDownloader {
 
             logger.info("Downloaded:" + i + ":" + code + " to " + file.getCanonicalPath());
         }
-        logger.info("Finished. Dirname:" + dirname);
+        logger.info("Finished. Dirname:" + storageDir);
 
         long time_end = System.nanoTime();
         logger.info(TimeUnit.NANOSECONDS.toMinutes(time_end - time_start) + " minutes");
-
-        return dirname;
     }
 
     private String downloadCoursePage(String courseCode) throws IOException {
-        Connection connection = Jsoup.connect(url).timeout(0).maxBodySize(0);
+        Connection connection = Jsoup.connect(URL).timeout(0).maxBodySize(0);
         connection.request().requestBody(
                 String.format("subject=%s&Designation=Any&catalognbr=&CourseTime=All&Component=All&time=&end_time=&day=m&day=tu&day=w&day=th&day=f&LocationCode=Any&command=search",
                 courseCode));

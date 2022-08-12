@@ -15,24 +15,23 @@ import java.util.logging.Logger;
 
 import static shrumit.ParsingUtils.*;
 
-@SuppressWarnings("ConstantConditions")
 public class DirectoryReader {
 
-    static final String outputView = "master.json";
-    static final String outputSearch = "search.json";
-    static final String outputMetadata = "metadata.json";
+    Logger logger;
 
-    public static String parse(String inputDirName, Logger logger) throws IOException {
+    public DirectoryReader(Logger logger) {
+        this.logger =  logger;
+    }
+
+    public void parse(String storageDir, String outputDir, String outputView, String outputSearch, String outputMetadata) throws IOException {
         long time_start = System.nanoTime();
 
-        if (inputDirName == null) {
-            throw new IllegalArgumentException("inputDirName cannot be null");
+        if (storageDir == null) {
+            throw new IllegalArgumentException("storageDir cannot be null");
         }
 
-        String outputDirname = inputDirName.replace("dump", "coutput");
-
         // Retrieve files in directory
-        File dir = new File(inputDirName);
+        File dir = new File(storageDir);
         File[] fileList = dir.listFiles();
         Arrays.sort(fileList);
 
@@ -46,30 +45,11 @@ public class DirectoryReader {
 
         Collections.sort(courses);
 
-        writeToFile(produceViewDataJson(courses), outputDirname, outputView, logger);
-        writeToFile(produceSearchDataJson(courses), outputDirname, outputSearch, logger);
-        writeToFile(produceMetadataJson(), outputDirname, outputMetadata, logger);
+        FileUtils.writeToFile(produceViewDataJson(courses), outputDir, outputView, logger);
+        FileUtils.writeToFile(produceSearchDataJson(courses), outputDir, outputSearch, logger);
+        FileUtils.writeToFile(produceMetadataJson(), outputDir, outputMetadata, logger);
 
         long time_end = System.nanoTime();
         logger.info("Parsed " + courses.size() + " courses in " + TimeUnit.NANOSECONDS.toMinutes(time_end-time_start) + " seconds");
-
-        return outputDirname;
-    }
-
-    private static void writeToFile(String body, String dirname, String filename, Logger logger) throws IOException {
-        File dir = new File(dirname);
-        if (!dir.exists()) {
-            logger.info("Created directory:" + dir.getCanonicalPath());
-            dir.mkdir();
-        }
-
-        File output = new File(dirname + "/" + filename);
-        if (!output.exists()) {
-            output.createNewFile();
-        }
-        FileWriter fw = new FileWriter(output.getAbsoluteFile());
-        BufferedWriter bw = new BufferedWriter(fw);
-        bw.write(body);
-        bw.close();
     }
 }
