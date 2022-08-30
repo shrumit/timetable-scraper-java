@@ -26,6 +26,7 @@ public class ParsingUtils {
     static final Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
 
     public static List<Course> parseHTML(File file, Logger logger) throws IOException {
+        logger.info("Parsing file: " + file.toString());
         Document doc = Jsoup.parse(file, "UTF-8", "");
         return parseDocument(doc, logger);
     }
@@ -47,7 +48,7 @@ public class ParsingUtils {
         // for each course in file
         for (int i = 0; i < names.size(); i++) {
             Course course = new Course(courses.size(), names.get(i).text());
-            logger.info("Parsing course:" + course.name);
+            logger.info("Processing course:" + course.name);
             Elements rows = tables.get(i).select("tbody").first().select("> tr");
 
             Map<String, Map<String, Section>> compMap = new LinkedHashMap<>();
@@ -60,10 +61,13 @@ public class ParsingUtils {
                 String compName = td.get(1).text();
                 String sectionName = td.get(0).text();
 
-                if (!compMap.containsKey(compName)) { // encountered a new component
+                if (!compMap.containsKey(compName)) {
+                    // encountered a new component
                     compMap.put(compName, new LinkedHashMap<String, Section>());
                 }
-                if (!compMap.get(compName).containsKey(sectionName)) { // encountered a new section
+
+                if (!compMap.get(compName).containsKey(sectionName)) {
+                    // encountered a new section
                     Section section = new Section(sectionName);
                     section.number = td.get(2).text();
                     section.location = td.get(6).text();
@@ -92,7 +96,7 @@ public class ParsingUtils {
                     if (days.get(j).text().isBlank() || days.get(j).text().equals("\u00a0"))
                         continue;
                     try {
-                        compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1);
+                        compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1, logger);
                     } catch (Exception e) {
                         logger.severe(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s",
                                 course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));

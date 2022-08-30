@@ -54,7 +54,8 @@ public class CoursePageDownloader {
             if (code.length() == 0)
                 continue;
 
-            logger.info("Attempting:" + i + ":" + code);
+            logger.info("Attempting to download:" + i + ":" + code);
+
             String content = "";
             boolean success = false;
             for (int retry = 0; retry < 5; retry++) {

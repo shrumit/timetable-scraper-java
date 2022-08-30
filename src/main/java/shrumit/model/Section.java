@@ -1,5 +1,7 @@
 package shrumit.model;
 
+import java.util.logging.Logger;
+
 public class Section {
 
     public static final String[] daysLabel = { "M", "Tu", "W", "Th", "F" };
@@ -11,7 +13,7 @@ public class Section {
     public String campus;
     public String timeShort;
     public String timeFull;
-    public int[][] timeslots; // stores start time and and length per day
+    public int[][] timeslots; // stores [day][0]:start time, [day][1]:length
     // Time stored in a bitmap where 1 bit = 30min occupied interval
     // LSB is the 30min interval starting at 8AM. Intervals go up to 10PM (i.e. 28
     // LSBs utilized)
@@ -41,7 +43,7 @@ public class Section {
         return false;
     }
 
-    public void addTime(String startStr, String endStr, int dayIdx) {
+    public void addTime(String startStr, String endStr, int dayIdx, Logger logger) {
         if (dayIdx > 4 || dayIdx < 0)
             throw new IllegalArgumentException("dayIdx not proper");
         int start = convertStringToInterval(startStr);
@@ -51,10 +53,22 @@ public class Section {
         int mask = 0;
         mask = ~mask;
         mask <<= len;
-        mask = ~mask;
-        mask <<= start;
-        if ((timebits[dayIdx] & mask) > 0)
-            throw new IllegalArgumentException("Section addTime overlap");
+        mask = ~mask; // len LSBs are set
+        mask <<= start; // move bits to the right position
+
+        // if there is an overlapping timeslot, the schedule webpage has an error
+        if ((timebits[dayIdx] & mask) > 0) {
+
+            // if timeslots align exactly - log and ignore
+            if ((timebits[dayIdx] == mask)) {
+                logger.warning(String.format("Duplicate timeslot row: %s; %s; %s", name, number, timeFull));
+                return;
+            }
+
+            // else it's fatal
+            throw new IllegalArgumentException("Section addTime unaligned overlap");
+        }
+
         timebits[dayIdx] |= mask;
 
         if (!timeShort.isEmpty())
@@ -85,5 +99,4 @@ public class Section {
 
         return total;
     }
-
 }
