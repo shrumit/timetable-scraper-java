@@ -30,22 +30,45 @@ public class App
         String storageDir = storageDirPrefix + runId;
         String outputDir = outputDirPrefix + runId;
 
+        boolean enableConcurrentMode = System.getenv("ENABLE_CONCURRENT_MODE") != null && System.getenv("ENABLE_CONCURRENT_MODE").equalsIgnoreCase("true");
+        logger.log(Level.INFO, "enableConcurrentMode:" + enableConcurrentMode);
 
-        try {
-            CoursePageDownloader downloader = new CoursePageDownloader(logger, storageDir);
-            downloader.download(runId);
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.download(): " + e.getMessage(), e);
-            System.exit(1);
+        CoursePageDownloader downloader = new CoursePageDownloader(logger);
+
+        if (enableConcurrentMode) {
+            try {
+                AsyncReader ar = new AsyncReader(logger, outputDir, outputView, outputSearch, outputMetadata);
+                downloader.downloadAndStream(ar.getQueue());
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "Exception in concurrent mode: " + e.getMessage(), e);
+                System.exit(1);
+            }
+
+            try {
+                DirectoryReader dr = new DirectoryReader(logger, outputDir, outputView, outputSearch, outputMetadata);
+                dr.parse(storageDir);
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
+                System.exit(1);
+            }
+        }
+        else {
+            try {
+                downloader.downloadAndSave(storageDir);
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.download(): " + e.getMessage(), e);
+                System.exit(1);
+            }
+
+            try {
+                DirectoryReader dr = new DirectoryReader(logger, outputDir, outputView, outputSearch, outputMetadata);
+                dr.parse(storageDir);
+            } catch (Exception e) {
+                logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
+                System.exit(1);
+            }
         }
 
-        try {
-            DirectoryReader dr = new DirectoryReader(logger);
-            dr.parse(storageDir, outputDir, outputView, outputSearch, outputMetadata);
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
-            System.exit(1);
-        }
 
         logger.info("Program ending normally");
         System.out.println("Bye");

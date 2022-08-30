@@ -18,12 +18,20 @@ import static shrumit.ParsingUtils.*;
 public class DirectoryReader {
 
     Logger logger;
+    String outputDir;
+    String outputView;
+    String outputSearch;
+    String outputMetadata;
 
-    public DirectoryReader(Logger logger) {
-        this.logger =  logger;
+    public DirectoryReader(Logger logger, String outputDir, String outputView, String outputSearch, String outputMetadata) {
+        this.logger = logger;
+        this.outputDir = outputDir;
+        this.outputView = outputView;
+        this.outputSearch = outputSearch;
+        this.outputMetadata = outputMetadata;
     }
 
-    public void parse(String storageDir, String outputDir, String outputView, String outputSearch, String outputMetadata) throws IOException {
+    public void parse(String storageDir) throws IOException {
         long time_start = System.nanoTime();
 
         if (storageDir == null) {

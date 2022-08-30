@@ -16,7 +16,7 @@ import static shrumit.ParsingUtils.*;
 
 public class AsyncReader implements Runnable {
 
-    public BlockingQueue<String> queue;
+    private BlockingQueue<String> queue;
 
     volatile boolean stopRequested;
 
@@ -33,6 +33,10 @@ public class AsyncReader implements Runnable {
         this.outputSearch = outputSearch;
         this.outputMetadata = outputMetadata;
         queue = new ArrayBlockingQueue<>(500);
+    }
+
+    public BlockingQueue<String> getQueue() {
+        return queue;
     }
 
     @Override

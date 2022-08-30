@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -26,14 +27,12 @@ public class CoursePageDownloader {
 
 
     Logger logger;
-    String storageDir;
 
-    public CoursePageDownloader(Logger logger, String storageDir) {
+    public CoursePageDownloader(Logger logger) {
         this.logger = logger;
-        this.storageDir = storageDir;
     }
 
-    public void download(String runId) throws Exception {
+    public void downloadAndSave(String storageDir) throws Exception {
         long time_start = System.nanoTime();
 
         // get list of subjects
@@ -93,6 +92,10 @@ public class CoursePageDownloader {
 
         long time_end = System.nanoTime();
         logger.info(TimeUnit.NANOSECONDS.toMinutes(time_end - time_start) + " minutes");
+    }
+
+    public void downloadAndStream(BlockingQueue<String> queue) {
+
     }
 
     private String downloadCoursePage(String courseCode) throws IOException {
