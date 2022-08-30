@@ -41,7 +41,7 @@ public class DirectoryReader {
         List<Course> courses = new ArrayList<>();
 
         for (File file : fileList) {
-            courses.addAll(parseHTML(file, logger));
+            courses.addAll(parseHTML(file, courses.size(), logger));
         }
 
         Collections.sort(courses);

@@ -25,18 +25,18 @@ public class ParsingUtils {
     // Regex for selecting course code suffix
     static final Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
 
-    public static List<Course> parseHTML(File file, Logger logger) throws IOException {
+    public static List<Course> parseHTML(File file, int courseIdOffset, Logger logger) throws IOException {
         logger.info("Parsing file: " + file.toString());
         Document doc = Jsoup.parse(file, "UTF-8", "");
-        return parseDocument(doc, logger);
+        return parseDocument(doc, courseIdOffset, logger);
     }
 
-    public static List<Course> parseHTML(String str, Logger logger) throws IOException {
+    public static List<Course> parseHTML(String str, int courseIdOffset, Logger logger) throws IOException {
         Document doc = Jsoup.parse(str);
-        return parseDocument(doc, logger);
+        return parseDocument(doc, courseIdOffset, logger);
     }
 
-    public static List<Course> parseDocument(Document doc, Logger logger) {
+    public static List<Course> parseDocument(Document doc, int courseIdOffset, Logger logger) {
         List<Course> courses = new ArrayList<>();
         Elements names = doc.getElementsByTag("h4");
         Elements tables = doc.getElementsByClass("table-striped");
@@ -47,7 +47,7 @@ public class ParsingUtils {
 
         // for each course in file
         for (int i = 0; i < names.size(); i++) {
-            Course course = new Course(courses.size(), names.get(i).text());
+            Course course = new Course(courseIdOffset + courses.size(), names.get(i).text());
             logger.info("Processing course:" + course.name);
             Elements rows = tables.get(i).select("tbody").first().select("> tr");
 
