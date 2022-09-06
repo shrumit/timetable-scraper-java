@@ -3,6 +3,7 @@ package shrumit;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,6 +32,7 @@ public class App
         String outputDir = outputDirPrefix + runId;
 
         boolean enableConcurrentMode = System.getenv("ENABLE_CONCURRENT_MODE") != null && System.getenv("ENABLE_CONCURRENT_MODE").equalsIgnoreCase("true");
+        enableConcurrentMode = true;
         logger.log(Level.INFO, "enableConcurrentMode:" + enableConcurrentMode);
 
         CoursePageDownloader downloader = new CoursePageDownloader(logger);
@@ -38,17 +40,12 @@ public class App
         if (enableConcurrentMode) {
             try {
                 AsyncReader ar = new AsyncReader(logger, outputDir, outputView, outputSearch, outputMetadata);
+                var arCf = CompletableFuture.runAsync(ar);
                 downloader.downloadAndStream(ar.getQueue());
+                ar.stop();
+                arCf.get();
             } catch (Exception e) {
                 logger.log(Level.SEVERE, "Exception in concurrent mode: " + e.getMessage(), e);
-                System.exit(1);
-            }
-
-            try {
-                DirectoryReader dr = new DirectoryReader(logger, outputDir, outputView, outputSearch, outputMetadata);
-                dr.parse(storageDir);
-            } catch (Exception e) {
-                logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
                 System.exit(1);
             }
         }
@@ -68,7 +65,6 @@ public class App
                 System.exit(1);
             }
         }
-
 
         logger.info("Program ending normally");
         System.out.println("Bye");

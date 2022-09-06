@@ -53,6 +53,12 @@ public class DirectoryReader {
 
         Collections.sort(courses);
 
+        // assign ids
+        int id = 0;
+        for (var course : courses)
+            course.id = id++;
+
+
         FileUtils.writeToFile(produceViewDataJson(courses), outputDir, outputView, logger);
         FileUtils.writeToFile(produceSearchDataJson(courses), outputDir, outputSearch, logger);
         FileUtils.writeToFile(produceMetadataJson(), outputDir, outputMetadata, logger);

@@ -46,7 +46,7 @@ public class ParsingUtils {
 
         // for each course in file
         for (int i = 0; i < names.size(); i++) {
-            Course course = new Course(courses.size(), names.get(i).text());
+            Course course = new Course(names.get(i).text());
             logger.info("Parsing course:" + course.name);
             Elements rows = tables.get(i).select("tbody").first().select("> tr");
 

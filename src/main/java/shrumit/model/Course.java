@@ -13,7 +13,11 @@ public class Course implements Comparable<Course> {
     public List<Component> components;
 
     public Course() {
-        components = new ArrayList<Component>();
+        this(".placeholder");
+    }
+
+    public Course(String name) {
+        this(-1, name);
     }
 
     public Course(int id, String name) {

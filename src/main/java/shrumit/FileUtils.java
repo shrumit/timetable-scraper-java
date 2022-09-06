@@ -7,20 +7,21 @@ import java.io.IOException;
 import java.util.logging.Logger;
 
 public class FileUtils {
-    public static void writeToFile(String body, String dirname, String filename, Logger logger) throws IOException {
+    public static String writeToFile(String body, String dirname, String filename, Logger logger) throws IOException {
         File dir = new File(dirname);
         if (!dir.exists()) {
             logger.info("Created directory:" + dir.getCanonicalPath());
             dir.mkdir();
         }
 
-        File output = new File(dirname + "/" + filename);
+        File output = new File(dirname + File.separator + filename);
         if (!output.exists()) {
             output.createNewFile();
         }
         FileWriter fw = new FileWriter(output.getAbsoluteFile());
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write(body);
-        bw.close();
+        bw.close(); // also closes fw
+        return output.getCanonicalPath();
     }
 }

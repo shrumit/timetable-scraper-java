@@ -59,12 +59,18 @@ public class AsyncReader implements Runnable {
                 }
             }
         }
+        System.out.println("AsyncReader stop requested");
 
         // do not write results to file if thread was interrupted
         if (Thread.currentThread().isInterrupted())
             return;
 
         Collections.sort(courses);
+
+        // assign ids
+        int id = 0;
+        for (var course : courses)
+            course.id = id++;
 
         try {
             FileUtils.writeToFile(ParsingUtils.produceViewDataJson(courses), outputDir, outputView, logger);
