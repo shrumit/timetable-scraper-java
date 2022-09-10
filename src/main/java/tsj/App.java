@@ -38,30 +38,36 @@ public class App {
         String storageDir = storageDirPrefix + runId;
         String outputDir = outputDirPrefix + runId;
 
+        boolean parseOnly = false;
 
-        // get subjects
-        List<String> subjectsList = DownloadJob.fetchSubjects();
-//        subjectsList.subList(1, subjectsList.size()).clear();
-        logger.info("subjectsList.size():" + subjectsList.size());
-        BlockingQueue<String> subjects = new ArrayBlockingQueue<>(subjectsList.size());
-        subjects.addAll(subjectsList);
+//        parseOnly = true;
+//        storageDir = "";
+//        outputDir = "";
 
-        // spawn and execute DownloadJobs in parallel
-        CompletableFuture<Void>[] cfs = new CompletableFuture[THREADS];
-        for (int i = 0; i < cfs.length; i++) {
-            cfs[i] = CompletableFuture.runAsync(new DownloadJob(logger, subjects, storageDir));
-            logger.info("Spawned runnable:" + cfs[i].toString());
+        if (!parseOnly) {
+            // get subjects
+            List<String> subjectsList = DownloadJob.fetchSubjects();
+            logger.info("subjectsList.size():" + subjectsList.size());
+            BlockingQueue<String> subjects = new ArrayBlockingQueue<>(subjectsList.size());
+            subjects.addAll(subjectsList);
+
+            // spawn and execute DownloadJobs in parallel
+            CompletableFuture<Void>[] cfs = new CompletableFuture[THREADS];
+            for (int i = 0; i < cfs.length; i++) {
+                cfs[i] = CompletableFuture.runAsync(new DownloadJob(logger, subjects, storageDir));
+                logger.info("Spawned runnable:" + cfs[i].toString());
+            }
+
+            // wait for all of them
+            try {
+                CompletableFuture.allOf(cfs).get();
+                logger.info("All runnables ended");
+            } catch (Exception e) {
+                logger.severe(e.toString());
+                throw e;
+            }
+
         }
-
-        // wait for all of them
-        try {
-            CompletableFuture.allOf(cfs).get();
-            logger.info("All runnables ended");
-        } catch (Exception e) {
-            logger.severe(e.toString());
-            throw e;
-        }
-
         // parse
         ParsingJob pj = new ParsingJob(logger);
 

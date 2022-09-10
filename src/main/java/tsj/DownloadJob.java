@@ -18,12 +18,15 @@ public class DownloadJob implements Runnable {
     static final String URL = "https://studentservices.uwo.ca/secure/timetables/mastertt/ttindex.cfm";
     static final long CAPTCHA_SLEEP_SECONDS = 30;
 
-    static final int ERROR_RETRY = 5;
-    static final int CAPTCHA_RETRY = 10;
+    static final int NETWORK_RETRY_LIMIT = 5;
+    static final int CAPTCHA_RETRY_LIMIT = 10;
 
     Logger logger;
     BlockingQueue<String> subjects;
     String outputDir;
+
+    static boolean inCaptchaState = false; // doesn't need to be volatile because it's only accessed inside synchronized blocks
+    boolean captchaStateOwner = false;
 
     public DownloadJob(Logger logger, BlockingQueue<String> courseCodes, String outputDir) {
         this.logger = logger;
@@ -53,7 +56,7 @@ public class DownloadJob implements Runnable {
                 logger.info(String.format("Saved %s to file %s", subject, savedFilepath));
             }
         } catch (Exception e) {
-            logger.severe("Fatal error in DownloadJob thread");
+            logger.severe("Fatal error in DownloadJob thread. Throwing RuntimeException.");
             logger.severe(e.toString());
             throw new RuntimeException();
         }
@@ -62,27 +65,49 @@ public class DownloadJob implements Runnable {
     }
 
     private Document downloadCoursePageWithRetry(String subject) throws IOException, InterruptedException {
-        for (int captchaRetry = 0; captchaRetry < CAPTCHA_RETRY; captchaRetry++) {
-            Document page = null;
-            for (int errorRetry = 0; errorRetry < ERROR_RETRY; errorRetry++) {
-                try {
-                    logger.info(String.format("Attempting to download %s. captchaRetry:%s/%s. errorRetry:%s/%s", subject, captchaRetry, CAPTCHA_RETRY - 1, errorRetry, ERROR_RETRY - 1));
-                    page = downloadCoursePage(subject);
-                    break;
-                } catch (IOException e) {
-                    logger.info(e.toString());
+        for (int captchaRetry = 0; captchaRetry < CAPTCHA_RETRY_LIMIT; captchaRetry++) {
+
+            // go into wait when another thread is doing captcha retries
+            synchronized (DownloadJob.class) {
+                if (inCaptchaState && !captchaStateOwner) {
+                    logger.info("Waiting because inCaptchaState");
+                    DownloadJob.class.wait();
+                    logger.info("Done waiting.");
                 }
             }
 
-            if (page == null) {
-                throw new IOException("Too many errored retries");
-            }
+            Document page = downloadCoursePage(subject);
 
             // check for captcha page
             if (!page.getElementsContainingOwnText("captcha").isEmpty()) {
-                logger.info("Captcha. Sleeping " + CAPTCHA_SLEEP_SECONDS + " seconds.");
+                logger.info(String.format("Detected captcha when downloading %s. captchaRetry:%s/%s", subject, captchaRetry, CAPTCHA_RETRY_LIMIT - 1));
+                synchronized (DownloadJob.class) {
+                    // this is the first thread to detect captcha hence it becomes captchaStateOwner
+                    if (!inCaptchaState || captchaStateOwner) {
+                        if (!captchaStateOwner)
+                            logger.info("Enabling inCaptchaState");
+                        inCaptchaState = true;
+                        captchaStateOwner = true;
+                    } else {
+                        // although this thread also downloaded a captcha page, another thread beat it for becoming captchaStateOwner
+                        // continue so that this thread ends up at wait() with the other threads
+                        captchaRetry--;
+                        continue;
+                    }
+                }
+                logger.info("Sleeping " + CAPTCHA_SLEEP_SECONDS + " seconds.");
                 Thread.sleep(TimeUnit.SECONDS.toMillis(CAPTCHA_SLEEP_SECONDS));
+
             } else {
+                // captchaStateOwner exits inCaptchaState and notifies waiting threads
+                if (captchaStateOwner) {
+                    synchronized (DownloadJob.class) {
+                        logger.info("Disabling inCaptchaState and notifying");
+                        inCaptchaState = false;
+                        captchaStateOwner = false;
+                        DownloadJob.class.notifyAll();
+                    }
+                }
                 return page;
             }
         }
@@ -91,12 +116,21 @@ public class DownloadJob implements Runnable {
     }
 
     private Document downloadCoursePage(String subject) throws IOException {
-        Connection connection = Jsoup.connect(URL).timeout(0).maxBodySize(0);
-        connection.request().requestBody(
-                String.format("subject=%s&Designation=Any&catalognbr=&CourseTime=All&Component=All&time=&end_time=&day=m&day=tu&day=w&day=th&day=f&LocationCode=Any&command=search",
-                        subject));
 
-        return connection.post();
+        for (int networkRetries = 0; networkRetries < NETWORK_RETRY_LIMIT; networkRetries++) {
+            try {
+                Connection connection = Jsoup.connect(URL).timeout(0).maxBodySize(0);
+                connection.request().requestBody(
+                        String.format("subject=%s&Designation=Any&catalognbr=&CourseTime=All&Component=All&time=&end_time=&day=m&day=tu&day=w&day=th&day=f&LocationCode=Any&command=search",
+                                subject));
+
+                return connection.post();
+            } catch (IOException e) {
+                logger.warning(String.format("Exception when downloading %s networkRetries:%s/%s %s", subject, networkRetries, NETWORK_RETRY_LIMIT - 1, e));
+            }
+        }
+
+        throw new IOException("Too many errored retries");
     }
 
     public static List<String> fetchSubjects() throws IOException {
