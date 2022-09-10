@@ -6,18 +6,17 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import tsj.model.*;
+import tsj.model.Component;
+import tsj.model.Course;
+import tsj.model.Metadata;
+import tsj.model.Section;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.logging.Logger;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ParsingJob {
 
@@ -40,7 +39,7 @@ public class ParsingJob {
         File[] fileList = dir.listFiles();
         Arrays.sort(fileList);
 
-        logger.info("Number of files:" + fileList.length);
+        logger.info("Number of files in dir:" + fileList.length);
 
         for (File file : fileList) {
             parseFromFile(file);
@@ -142,6 +141,7 @@ public class ParsingJob {
         CommonUtils.saveToFile(produceViewDataJson(), outputDir, outputView, logger);
         CommonUtils.saveToFile(produceSearchDataJson(), outputDir, outputSearch, logger);
         CommonUtils.saveToFile(produceMetadataJson(), outputDir, outputMetadata, logger);
+        logger.info(String.format("Saved output for %s courses to %s", courses.size(), outputDir));
     }
 
     public String produceMetadataJson() {

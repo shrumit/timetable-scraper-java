@@ -1,16 +1,20 @@
 package tsj;
 
-import org.jsoup.nodes.Document;
-
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.*;
 
-public class App
-{
+public class App {
 
     static final String outputView = "master.json";
     static final String outputSearch = "search.json";
@@ -21,7 +25,7 @@ public class App
 
     static final int THREADS = 3;
 
-    public static void main( String[] args ) throws IOException, ExecutionException, InterruptedException {
+    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         System.out.println("Hello World!");
 
         String runId = args.length == 0 ? dateTimeString() : args[0];
@@ -37,13 +41,13 @@ public class App
 
         // get subjects
         List<String> subjectsList = DownloadJob.fetchSubjects();
-        subjectsList.subList(1,subjectsList.size()).clear();
+//        subjectsList.subList(1, subjectsList.size()).clear();
         logger.info("subjectsList.size():" + subjectsList.size());
-        BlockingQueue<String> subjects = new ArrayBlockingQueue<String>(subjectsList.size());
+        BlockingQueue<String> subjects = new ArrayBlockingQueue<>(subjectsList.size());
         subjects.addAll(subjectsList);
 
         // spawn and execute DownloadJobs in parallel
-        CompletableFuture<Void>[] cfs = new CompletableFuture[1];
+        CompletableFuture<Void>[] cfs = new CompletableFuture[THREADS];
         for (int i = 0; i < cfs.length; i++) {
             cfs[i] = CompletableFuture.runAsync(new DownloadJob(logger, subjects, storageDir));
             logger.info("Spawned runnable:" + cfs[i].toString());
@@ -52,6 +56,7 @@ public class App
         // wait for all of them
         try {
             CompletableFuture.allOf(cfs).get();
+            logger.info("All runnables ended");
         } catch (Exception e) {
             logger.severe(e.toString());
             throw e;
@@ -62,41 +67,6 @@ public class App
 
         pj.parseFromDir(storageDir);
         pj.saveOutput(outputDir, outputView, outputSearch, outputMetadata);
-
-//        boolean enableConcurrentMode = System.getenv("ENABLE_CONCURRENT_MODE") != null && System.getenv("ENABLE_CONCURRENT_MODE").equalsIgnoreCase("true");
-//        enableConcurrentMode = true;
-//        logger.log(Level.INFO, "enableConcurrentMode:" + enableConcurrentMode);
-//
-//        CoursePageDownloader downloader = new CoursePageDownloader(logger);
-//
-//        if (enableConcurrentMode) {
-//            try {
-//                AsyncReader ar = new AsyncReader(logger, outputDir, outputView, outputSearch, outputMetadata);
-//                var arCf = CompletableFuture.runAsync(ar);
-//                downloader.downloadAndStream(ar.getQueue());
-//                ar.stop();
-//                arCf.get();
-//            } catch (Exception e) {
-//                logger.log(Level.SEVERE, "Exception in concurrent mode: " + e.getMessage(), e);
-//                System.exit(1);
-//            }
-//        }
-//        else {
-//            try {
-//                downloader.downloadAndSave(storageDir);
-//            } catch (Exception e) {
-//                logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.download(): " + e.getMessage(), e);
-//                System.exit(1);
-//            }
-//
-//            try {
-//                DirectoryReader dr = new DirectoryReader(logger, outputDir, outputView, outputSearch, outputMetadata);
-//                dr.parse(storageDir);
-//            } catch (Exception e) {
-//                logger.log(Level.SEVERE, "Exception calling CoursePageDownloader.scrape(): " + e.getMessage(), e);
-//                System.exit(1);
-//            }
-//        }
 
         logger.info("Program ending normally");
         System.out.println("Bye");
@@ -129,9 +99,44 @@ public class App
     }
 
     static class MyFormatter extends SimpleFormatter {
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss Z");
+
         @Override
         public String format(LogRecord record) {
-            return super.format(record).replaceAll("[\\t\\n\\r]+"," ") + System.lineSeparator();
+            // see https://github.com/openjdk/jdk17/blob/4afbcaf55383ec2f5da53282a1547bac3d099e9d/src/java.logging/share/classes/java/util/logging/SimpleFormatter.java
+
+            ZonedDateTime zdt = ZonedDateTime.ofInstant(record.getInstant(), ZoneId.systemDefault());
+
+            String className = record.getSourceClassName();
+            String methodName = record.getSourceMethodName();
+
+            String source = String.format(
+                    "%s#%s",
+                    className != null ? className : "<unknown>",
+                    methodName != null ? methodName : "<unknown>"
+            );
+
+            String thread = Thread.currentThread().getName();
+            String message = formatMessage(record);
+
+            String throwable = "";
+            if (record.getThrown() != null) {
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                pw.println();
+                record.getThrown().printStackTrace(pw);
+                pw.close();
+                throwable = sw.toString();
+            }
+
+            return String.format(
+                    "[%s] %s %s %s :::: %s %s\n",
+                    zdt.format(dateFormat),
+                    record.getLevel(),
+                    source,
+                    thread,
+                    message,
+                    throwable);
         }
     }
 }

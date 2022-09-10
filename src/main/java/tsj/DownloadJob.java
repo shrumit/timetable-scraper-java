@@ -35,7 +35,7 @@ public class DownloadJob implements Runnable {
     @Override
     public void run() {
 
-        logger.info(String.format("Started DownloadJob on thread %s\n", Thread.currentThread().getName()));
+        logger.info("Started DownloadJob");
 
         try {
             while (true) {
@@ -53,12 +53,12 @@ public class DownloadJob implements Runnable {
                 logger.info(String.format("Saved %s to file %s", subject, savedFilepath));
             }
         } catch (Exception e) {
-            logger.severe(String.format("Fatal error in DownloadJob thread%s", Thread.currentThread().getName()));
+            logger.severe("Fatal error in DownloadJob thread");
             logger.severe(e.toString());
             throw new RuntimeException();
         }
 
-        logger.info(String.format("Ending DownloadJob normally on thread %s", Thread.currentThread().getName()));
+        logger.info("Ending DownloadJob normally");
     }
 
     private Document downloadCoursePageWithRetry(String subject) throws IOException, InterruptedException {

@@ -8,8 +8,6 @@ import java.util.logging.Logger;
 
 public class CommonUtils {
 
-
-
     public static String saveToFile(String body, String dirname, String filename, Logger logger) throws IOException {
         File dir = new File(dirname);
         if (!dir.exists()) {
