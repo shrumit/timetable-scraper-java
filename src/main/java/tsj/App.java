@@ -66,8 +66,8 @@ public class App {
                 logger.severe(e.toString());
                 throw e;
             }
-
         }
+
         // parse
         ParsingJob pj = new ParsingJob(logger);
 

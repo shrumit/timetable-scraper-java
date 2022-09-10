@@ -81,20 +81,23 @@ public class DownloadJob implements Runnable {
             // check for captcha page
             if (!page.getElementsContainingOwnText("captcha").isEmpty()) {
                 logger.info(String.format("Detected captcha when downloading %s. captchaRetry:%s/%s", subject, captchaRetry, CAPTCHA_RETRY_LIMIT - 1));
-                synchronized (DownloadJob.class) {
-                    // this is the first thread to detect captcha hence it becomes captchaStateOwner
-                    if (!inCaptchaState || captchaStateOwner) {
-                        if (!captchaStateOwner)
+
+                if (!captchaStateOwner) {
+                    synchronized (DownloadJob.class) {
+                        // this is the first thread to detect captcha hence it becomes captchaStateOwner. only the captchaStateOwner may enable/disable inCaptchaState
+                        if (!inCaptchaState) {
                             logger.info("Enabling inCaptchaState");
-                        inCaptchaState = true;
-                        captchaStateOwner = true;
-                    } else {
-                        // although this thread also downloaded a captcha page, another thread beat it for becoming captchaStateOwner
-                        // continue so that this thread ends up at wait() with the other threads
-                        captchaRetry--;
-                        continue;
+                            captchaStateOwner = true;
+                            inCaptchaState = true;
+                        } else {
+                            // although this thread also downloaded a captcha page, another thread beat it for becoming captchaStateOwner
+                            // continue so that this thread ends up at wait() with the other threads
+                            captchaRetry--;
+                            continue;
+                        }
                     }
                 }
+
                 logger.info("Sleeping " + CAPTCHA_SLEEP_SECONDS + " seconds.");
                 Thread.sleep(TimeUnit.SECONDS.toMillis(CAPTCHA_SLEEP_SECONDS));
 
