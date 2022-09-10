@@ -1,4 +1,4 @@
-package shrumit;
+package tsj;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -6,10 +6,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import shrumit.model.Component;
-import shrumit.model.Course;
-import shrumit.model.Metadata;
-import shrumit.model.Section;
+import tsj.model.Component;
+import tsj.model.Course;
+import tsj.model.Metadata;
+import tsj.model.Section;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,37 +18,52 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ParsingUtils {
+public class ParsingJob {
 
     // Regex to shorten name
     static final Pattern shortname_regex = Pattern.compile("(.{1,4}).* (\\d{4}\\w{0,1}).*");
     // Regex for selecting course code suffix
     static final Pattern suffix_regex = Pattern.compile(".*\\d{4}(\\w).*");
 
-    public static List<Course> parseHTML(File file, int courseIdOffset, Logger logger) throws IOException {
-        logger.info("Parsing file: " + file.toString());
+    Logger logger;
+
+    List<Course> courses;
+
+    public ParsingJob(Logger logger) {
+        this.logger = logger;
+        courses = new ArrayList<>();
+    }
+
+    public void parseFromDir(String inputDir) throws IOException {
+        File dir = new File(inputDir);
+        File[] fileList = dir.listFiles();
+        Arrays.sort(fileList);
+
+        logger.info("Number of files in dir:" + fileList.length);
+
+        for (File file : fileList) {
+            parseFromFile(file);
+        }
+    }
+
+    public void parseFromFile(File file) throws IOException {
+        logger.info("Parsing file " + file.getName());
+
         Document doc = Jsoup.parse(file, "UTF-8", "");
-        return parseDocument(doc, courseIdOffset, logger);
-    }
 
-    public static List<Course> parseHTML(String str, int courseIdOffset, Logger logger) throws IOException {
-        Document doc = Jsoup.parse(str);
-        return parseDocument(doc, courseIdOffset, logger);
-    }
-
-    public static List<Course> parseDocument(Document doc, int courseIdOffset, Logger logger) {
-        List<Course> courses = new ArrayList<>();
         Elements names = doc.getElementsByTag("h4");
         Elements tables = doc.getElementsByClass("table-striped");
 
         if (names.size() != tables.size()) {
-            throw new RuntimeException("Size mismatch");
+            throw new IllegalArgumentException("Size mismatch");
         }
+
+        logger.info("No. of courses in page:" + names.size());
 
         // for each course in file
         for (int i = 0; i < names.size(); i++) {
-            Course course = new Course(courseIdOffset + courses.size(), names.get(i).text());
-            logger.info("Processing course:" + course.name);
+            Course course = new Course(names.get(i).text(), courses.size());
+            logger.info("Parsing course " + course.name);
             Elements rows = tables.get(i).select("tbody").first().select("> tr");
 
             Map<String, Map<String, Section>> compMap = new LinkedHashMap<>();
@@ -63,9 +78,8 @@ public class ParsingUtils {
 
                 if (!compMap.containsKey(compName)) {
                     // encountered a new component
-                    compMap.put(compName, new LinkedHashMap<String, Section>());
+                    compMap.put(compName, new LinkedHashMap<>());
                 }
-
                 if (!compMap.get(compName).containsKey(sectionName)) {
                     // encountered a new section
                     Section section = new Section(sectionName);
@@ -98,7 +112,7 @@ public class ParsingUtils {
                     try {
                         compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1, logger);
                     } catch (Exception e) {
-                        logger.severe(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s",
+                        logger.severe(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s\n",
                                 course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));
                         throw e;
                     }
@@ -107,9 +121,7 @@ public class ParsingUtils {
 
             // remove empty sections and components
             compMap.entrySet().removeIf(comp -> {
-                comp.getValue().entrySet().removeIf(sec -> {
-                    return !sec.getValue().hasTimeslots();
-                });
+                comp.getValue().entrySet().removeIf(sec -> !sec.getValue().hasTimeslots());
                 return comp.getValue().isEmpty();
             });
 
@@ -122,21 +134,29 @@ public class ParsingUtils {
 
             if (!course.components.isEmpty())
                 courses.add(course);
+            else
+                logger.info("Skipping due to all empty components " + course.name);
         }
-        return courses;
     }
 
-    public static String produceMetadataJson() throws IOException {
+    public void saveOutput(String outputDir, String outputView, String outputSearch, String outputMetadata) throws IOException {
+        CommonUtils.saveToFile(produceViewDataJson(), outputDir, outputView, logger);
+        CommonUtils.saveToFile(produceSearchDataJson(), outputDir, outputSearch, logger);
+        CommonUtils.saveToFile(produceMetadataJson(), outputDir, outputMetadata, logger);
+        logger.info(String.format("Saved output for %s courses to %s", courses.size(), outputDir));
+    }
+
+    public String produceMetadataJson() {
         Gson gson = new Gson();
         return gson.toJson(Metadata.now());
     }
 
-    public static String produceViewDataJson(List<Course> courses) throws IOException {
+    public String produceViewDataJson() {
         Gson gson = new Gson();
         return gson.toJson(courses);
     }
 
-    public static String produceSearchDataJson(List<Course> courses) throws IOException {
+    public String produceSearchDataJson() {
         Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         StringJoiner termA = new StringJoiner(",", "[", "]");
         StringJoiner termB = new StringJoiner(",", "[", "]");
@@ -165,6 +185,6 @@ public class ParsingUtils {
                 default -> throw new IllegalArgumentException("Unexpected suffix: " + course.name);
             }
         }
-        return "[" + termA.toString() + "," + termB.toString() + "]";
+        return "[" + termA + "," + termB + "]";
     }
 }
