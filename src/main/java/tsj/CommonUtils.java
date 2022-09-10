@@ -1,4 +1,4 @@
-package shrumit;
+package tsj;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -6,8 +6,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-public class FileUtils {
-    public static String writeToFile(String body, String dirname, String filename, Logger logger) throws IOException {
+public class CommonUtils {
+
+
+
+    public static String saveToFile(String body, String dirname, String filename, Logger logger) throws IOException {
         File dir = new File(dirname);
         if (!dir.exists()) {
             logger.info("Created directory:" + dir.getCanonicalPath());
@@ -24,4 +27,5 @@ public class FileUtils {
         bw.close(); // also closes fw
         return output.getCanonicalPath();
     }
+
 }

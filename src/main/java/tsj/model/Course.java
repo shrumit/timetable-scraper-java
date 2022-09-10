@@ -1,4 +1,4 @@
-package shrumit.model;
+package tsj.model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,15 +12,11 @@ public class Course implements Comparable<Course> {
     public String name;
     public List<Component> components;
 
-    public Course() {
-        this(".placeholder");
-    }
-
     public Course(String name) {
-        this(-1, name);
+        this(name, -1);
     }
 
-    public Course(int id, String name) {
+    public Course(String name, int id) {
         this.id = id;
         this.name = name;
         components = new ArrayList<Component>();

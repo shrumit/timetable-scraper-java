@@ -1,6 +1,6 @@
-package shrumit;
+package tsj;
 
-import shrumit.model.Course;
+import tsj.model.Course;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static shrumit.ParsingUtils.*;
+import static tsj.ParsingUtils.*;
 
 public class AsyncReader implements Runnable {
 
@@ -73,9 +73,9 @@ public class AsyncReader implements Runnable {
             course.id = id++;
 
         try {
-            FileUtils.writeToFile(ParsingUtils.produceViewDataJson(courses), outputDir, outputView, logger);
-            FileUtils.writeToFile(ParsingUtils.produceSearchDataJson(courses), outputDir, outputSearch, logger);
-            FileUtils.writeToFile(ParsingUtils.produceMetadataJson(), outputDir, outputMetadata, logger);
+            CommonUtils.saveToFile(ParsingUtils.produceViewDataJson(courses), outputDir, outputView, logger);
+            CommonUtils.saveToFile(ParsingUtils.produceSearchDataJson(courses), outputDir, outputSearch, logger);
+            CommonUtils.saveToFile(ParsingUtils.produceMetadataJson(), outputDir, outputMetadata, logger);
 
         } catch (IOException e) {
             e.printStackTrace();

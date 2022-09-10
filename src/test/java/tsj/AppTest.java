@@ -1,4 +1,4 @@
-package shrumit;
+package tsj;
 
 import static org.junit.Assert.assertTrue;
 

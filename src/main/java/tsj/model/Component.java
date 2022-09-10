@@ -1,4 +1,4 @@
-package shrumit.model;
+package tsj.model;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,15 +1,12 @@
-package shrumit;
+package tsj;
 
 import org.jsoup.Connection;
-import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
@@ -58,8 +55,8 @@ public class CoursePageDownloader {
 
             logger.info("Attempting:" + i + ":" + code);
 
-            String content = downloadCoursePageWithRetry(code, logger);
-            String filepath = FileUtils.writeToFile(content, storageDir, code, logger);
+            String content = downloadCoursePageWithRetry(code, logger).toString();
+            String filepath = CommonUtils.saveToFile(content, storageDir, code, logger);
 
             logger.info("Downloaded:" + i + ":" + code + " to " + filepath);
         }
@@ -72,8 +69,7 @@ public class CoursePageDownloader {
 
     public void downloadAndStream(BlockingQueue<String> outputQueue) throws IOException, ExecutionException, InterruptedException {
         // add courseCode to a queue
-        BlockingQueue<String> subjectCodes = new LinkedBlockingQueue<>();
-        subjectCodes.addAll(getSubjects());
+        BlockingQueue<String> subjectCodes = new LinkedBlockingQueue<>(getSubjects());
         logger.info("Number of subjects:" + subjectCodes.size());
 
         // spawn parallel downloaders
@@ -85,9 +81,8 @@ public class CoursePageDownloader {
                     String code = subjectCodes.poll();
                     while (code != null) {
                         logger.info("Runnable " + finalI + " processing " + code);
-                        String content = downloadCoursePageWithRetry(code, logger);
-                        outputQueue.put(content);
-
+                        Document page = downloadCoursePageWithRetry(code, logger);
+                        outputQueue.put(page.toString());
                         code = subjectCodes.poll();
                     }
                 } catch (InterruptedException | IOException e) {
@@ -115,14 +110,12 @@ public class CoursePageDownloader {
         return list;
     }
 
-    private static String downloadCoursePageWithRetry(String code, Logger logger) throws IOException, InterruptedException {
+    private static Document downloadCoursePageWithRetry(String subject, Logger logger) throws IOException, InterruptedException {
         for (int captchaRetry = 0; captchaRetry < CAPTCHA_RETRY; captchaRetry++) {
-            String content = "";
-            boolean success = false;
+            Document page = null;
             for (int errorRetry = 0; errorRetry < ERROR_RETRY; errorRetry++) {
                 try {
-                    content = downloadCoursePage(code);
-                    success = true;
+                    page = downloadCoursePage(subject);
                     break;
                 } catch (SocketTimeoutException e) {
                     logger.info("SocketTimeoutException. Retrying. " + e.getMessage());
@@ -131,28 +124,28 @@ public class CoursePageDownloader {
                 }
             }
 
-            if (!success) {
+            if (page == null) {
                 throw new IOException("Too many errored retries");
             }
 
             // check for captcha page
-            if (content.length() < 3000 && content.contains("captcha")) {
+            if (!page.getElementsContainingOwnText("captcha").isEmpty()) {
                 logger.info("Captcha. Sleeping " + CAPTCHA_SLEEP_SECONDS + " seconds.");
                 Thread.sleep(TimeUnit.SECONDS.toMillis(CAPTCHA_SLEEP_SECONDS));
             } else {
-                return content;
+                return page;
             }
         }
 
         throw new IOException("Too many captcha retries");
     }
 
-    private static String downloadCoursePage(String courseCode) throws IOException {
+    private static Document downloadCoursePage(String subject) throws IOException {
         Connection connection = Jsoup.connect(URL).timeout(0).maxBodySize(0);
         connection.request().requestBody(
                 String.format("subject=%s&Designation=Any&catalognbr=&CourseTime=All&Component=All&time=&end_time=&day=m&day=tu&day=w&day=th&day=f&LocationCode=Any&command=search",
-                        courseCode));
+                        subject));
 
-        return connection.post().toString();
+        return connection.post();
     }
 }

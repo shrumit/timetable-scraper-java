@@ -48,7 +48,7 @@
           <archive>
             <manifest>
               <!-- <addClasspath>true</addClasspath> -->
-              <mainClass>shrumit.App</mainClass>
+              <mainClass>tsj.App</mainClass>
             </manifest>
           </archive>
         </configuration>

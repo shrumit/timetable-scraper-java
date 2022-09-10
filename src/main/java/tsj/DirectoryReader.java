@@ -1,10 +1,8 @@
-package shrumit;
+package tsj;
 
-import shrumit.model.Course;
+import tsj.model.Course;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,7 +11,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import static shrumit.ParsingUtils.*;
+import static tsj.ParsingUtils.*;
 
 public class DirectoryReader {
 
@@ -59,9 +57,9 @@ public class DirectoryReader {
             course.id = id++;
 
 
-        FileUtils.writeToFile(produceViewDataJson(courses), outputDir, outputView, logger);
-        FileUtils.writeToFile(produceSearchDataJson(courses), outputDir, outputSearch, logger);
-        FileUtils.writeToFile(produceMetadataJson(), outputDir, outputMetadata, logger);
+        CommonUtils.saveToFile(produceViewDataJson(courses), outputDir, outputView, logger);
+        CommonUtils.saveToFile(produceSearchDataJson(courses), outputDir, outputSearch, logger);
+        CommonUtils.saveToFile(produceMetadataJson(), outputDir, outputMetadata, logger);
 
         long time_end = System.nanoTime();
         logger.info("Parsed " + courses.size() + " courses in " + TimeUnit.NANOSECONDS.toMinutes(time_end-time_start) + " seconds");
