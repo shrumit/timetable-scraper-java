@@ -27,11 +27,12 @@ public class ParsingJob {
 
     Logger logger;
 
-    List<Course> courses;
+    List<Course> courses = new ArrayList<>();
+    Set<String> campusTypes = new HashSet<>();
+    Set<String> deliveryTypes = new HashSet<>();
 
     public ParsingJob(Logger logger) {
         this.logger = logger;
-        courses = new ArrayList<>();
     }
 
     public void parseFromDir(String inputDir) throws IOException {
@@ -87,6 +88,9 @@ public class ParsingJob {
                     section.location = td.get(6).text();
                     section.instructor = td.get(7).text();
                     section.campus = td.get(10).text();
+                    campusTypes.add(section.campus);
+                    section.delivery = td.get(11).text();
+                    deliveryTypes.add(section.delivery);
                     compMap.get(compName).put(sectionName, section);
                 }
 
@@ -147,12 +151,12 @@ public class ParsingJob {
     }
 
     public String produceMetadataJson() {
-        Gson gson = new Gson();
-        return gson.toJson(Metadata.now());
+        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+        return gson.toJson(new Metadata(new ArrayList<>(campusTypes), new ArrayList<>(deliveryTypes)));
     }
 
     public String produceViewDataJson() {
-        Gson gson = new Gson();
+        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
         return gson.toJson(courses);
     }
 

@@ -4,38 +4,41 @@ import java.util.logging.Logger;
 
 public class Section {
 
-    public static final String[] daysLabel = { "M", "Tu", "W", "Th", "F" };
-    public static final String[] daysLabelLong = { "Mon", "Tue", "Wed", "Thu", "Fri" };
+    public static final String[] daysLabel = {"M", "Tu", "W", "Th", "F"};
+    public static final String[] daysLabelLong = {"Mon", "Tue", "Wed", "Thu", "Fri"};
+
     public String name;
     public String number;
     public String location;
     public String instructor;
     public String campus;
+    public String delivery;
     public String timeShort;
     public String timeFull;
     public int[][] timeslots; // stores [day][0]:start time, [day][1]:length
-    // Time stored in a bitmap where 1 bit = 30min occupied interval
+    // Time is stored in a bitmap where 1 bit = 30min occupied interval
     // LSB is the 30min interval starting at 8AM. Intervals go up to 10PM (i.e. 28
     // LSBs utilized)
     public int[] timebits;
 
     public Section(String name) {
-        this(name, "", "", "","");
+        this(name, "", "", "", "", "");
     }
 
-    public Section(String name, String number, String location, String instructor, String campus) {
+    public Section(String name, String number, String location, String instructor, String campus, String delivery) {
         this.name = name;
         this.number = number;
         this.location = location;
         this.instructor = instructor;
         this.campus = campus;
+        this.delivery = delivery;
         this.timeShort = "";
         this.timeFull = "";
         timeslots = new int[5][2];
         timebits = new int[5];
     }
 
-    // returns true is at least one timebit is nonzero
+    // returns true if at least one timebit is nonzero
     public boolean hasTimeslots() {
         for (int n : timebits)
             if (n != 0)
