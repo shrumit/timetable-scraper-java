@@ -28,8 +28,8 @@ public class ParsingJob {
     Logger logger;
 
     List<Course> courses = new ArrayList<>();
-    Set<String> campusTypes = new HashSet<>();
-    Set<String> deliveryTypes = new HashSet<>();
+    Map<String,Integer> campusTypes = new HashMap<>();
+    Map<String,Integer> deliveryTypes = new HashMap<>();
 
     public ParsingJob(Logger logger) {
         this.logger = logger;
@@ -88,9 +88,9 @@ public class ParsingJob {
                     section.location = td.get(6).text();
                     section.instructor = td.get(7).text();
                     section.campus = td.get(10).text();
-                    campusTypes.add(section.campus);
+                    campusTypes.put(section.campus, 1 + campusTypes.getOrDefault(section.campus, 0));
                     section.delivery = td.get(11).text();
-                    deliveryTypes.add(section.delivery);
+                    deliveryTypes.put(section.delivery, 1 + deliveryTypes.getOrDefault(section.delivery, 0));
                     compMap.get(compName).put(sectionName, section);
                 }
 
@@ -124,10 +124,10 @@ public class ParsingJob {
             } // done parsing all sections of the course's table
 
             // remove empty sections and components
-            compMap.entrySet().removeIf(comp -> {
-                comp.getValue().entrySet().removeIf(sec -> !sec.getValue().hasTimeslots());
-                return comp.getValue().isEmpty();
-            });
+//            compMap.entrySet().removeIf(comp -> {
+//                comp.getValue().entrySet().removeIf(sec -> !sec.getValue().hasTimeslots());
+//                return comp.getValue().isEmpty();
+//            });
 
             // convert map to Component objects and add to course
             compMap.forEach((k, v) -> {
@@ -139,7 +139,7 @@ public class ParsingJob {
             if (!course.components.isEmpty())
                 courses.add(course);
             else
-                logger.info("Skipping due to all empty components " + course.name);
+                logger.warning("Skipping due to all empty components " + course.name);
         }
     }
 
@@ -152,7 +152,18 @@ public class ParsingJob {
 
     public String produceMetadataJson() {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-        return gson.toJson(new Metadata(new ArrayList<>(campusTypes), new ArrayList<>(deliveryTypes)));
+
+        // sort campusTypes by descending frequency
+        List<String> ct = new ArrayList<>();
+        ct.addAll(campusTypes.keySet());
+        Collections.sort(ct, (a,b) -> Integer.compare(campusTypes.get(b), campusTypes.get(a)));
+
+        // sort deliveryTypes by descending frequency
+        List<String> dt = new ArrayList<>();
+        dt.addAll(deliveryTypes.keySet());
+        Collections.sort(dt, (a,b) -> Integer.compare(deliveryTypes.get(b), deliveryTypes.get(a)));
+
+        return gson.toJson(new Metadata(ct, dt));
     }
 
     public String produceViewDataJson() {
