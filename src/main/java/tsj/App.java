@@ -1,5 +1,7 @@
 package tsj;
 
+import org.apache.commons.cli.*;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -23,15 +25,35 @@ public class App {
     static final String storageDirPrefix = "dump";
     static final String outputDirPrefix = "coutput";
 
-    static final int THREADS = 3;
+    static final int DEFAULT_THREADS = 3;
 
-    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+    private static Options createOptions() {
+        final Options options = new Options();
+
+        Option logToFile = Option.builder("logToFile").build();
+        options.addOption(logToFile);
+
+        Option runId = Option.builder("runId").hasArg().build();
+        options.addOption(runId);
+
+        Option downloadThreads = Option.builder("downloadThreads").hasArg().build();
+        options.addOption(downloadThreads);
+
+        return options;
+    }
+
+    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException, ParseException {
         System.out.println("Hello World!");
 
-        String runId = args.length == 0 ? dateTimeString() : args[0];
+        CommandLine cmd = new DefaultParser().parse(createOptions(), args);
+
+        String runId = cmd.getOptionValue("runId");
+        if (runId == null) runId = dateTimeString();
+
         System.out.println(runId);
 
-        Logger logger = createLogger(runId);
+
+        Logger logger = createLogger(runId, cmd.hasOption("logToFile"));
         logger.info("Logger started. runId:" + runId);
 
 
@@ -51,12 +73,17 @@ public class App {
             BlockingQueue<String> subjects = new ArrayBlockingQueue<>(subjectsList.size());
             subjects.addAll(subjectsList);
 
+
             // spawn and execute DownloadJobs in parallel
-            CompletableFuture<Void>[] cfs = new CompletableFuture[THREADS];
+            String threadsArg = cmd.getOptionValue("downloadThreads");
+            int threads = threadsArg != null ? Integer.parseInt(threadsArg) : DEFAULT_THREADS;
+
+            CompletableFuture<Void>[] cfs = new CompletableFuture[threads];
             for (int i = 0; i < cfs.length; i++) {
                 cfs[i] = CompletableFuture.runAsync(new DownloadJob(logger, subjects, storageDir));
                 logger.info("Spawned runnable:" + cfs[i].toString());
             }
+
 
             // wait for all of them
             try {
@@ -84,17 +111,19 @@ public class App {
         return LocalDateTime.now().format(formatter);
     }
 
-    private static Logger createLogger(String runId) throws IOException {
+    private static Logger createLogger(String runId, boolean addFileHandler) throws IOException {
         Logger logger = Logger.getLogger(runId);
         logger.setUseParentHandlers(false);
         logger.setLevel(Level.ALL);
 
         var formatter = new MyFormatter();
 
-        var fileHandler = new FileHandler(runId + ".log");
-        fileHandler.setLevel(Level.ALL);
-        fileHandler.setFormatter(formatter);
-        logger.addHandler(fileHandler);
+        if (addFileHandler) {
+            var fileHandler = new FileHandler(runId + ".log");
+            fileHandler.setLevel(Level.ALL);
+            fileHandler.setFormatter(formatter);
+            logger.addHandler(fileHandler);
+        }
 
         var consoleHandler = new ConsoleHandler();
         consoleHandler.setLevel(Level.ALL);
