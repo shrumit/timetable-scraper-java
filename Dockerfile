@@ -8,4 +8,4 @@ COPY . .
 RUN mvn clean package
 WORKDIR /execution
 
-ENTRYPOINT java -jar /app/target/timetable-scraper-java-1.0-SNAPSHOT-jar-with-dependencies.jar
+ENTRYPOINT ["java", "-jar", "/app/target/timetable-scraper-java-1.0-SNAPSHOT-jar-with-dependencies.jar"]
