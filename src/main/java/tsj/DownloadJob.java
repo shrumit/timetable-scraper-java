@@ -69,7 +69,7 @@ public class DownloadJob implements Runnable {
 
             // go into wait when another thread is doing captcha retries
             synchronized (DownloadJob.class) {
-                if (inCaptchaState && !captchaStateOwner) {
+                while (inCaptchaState && !captchaStateOwner) {
                     logger.info("Waiting because inCaptchaState");
                     DownloadJob.class.wait();
                     logger.info("Done waiting.");
