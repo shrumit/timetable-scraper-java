@@ -39,6 +39,9 @@ public class App {
         Option downloadThreads = Option.builder("downloadThreads").hasArg().build();
         options.addOption(downloadThreads);
 
+        Option parseOnly = Option.builder("parseOnly").build();
+        options.addOption(parseOnly);
+
         return options;
     }
 
@@ -61,6 +64,8 @@ public class App {
         String outputDir = outputDirPrefix + runId;
 
         boolean parseOnly = false;
+        if (cmd.hasOption("parseOnly"))
+            parseOnly = true;
 
 //        parseOnly = true;
 //        storageDir = "";

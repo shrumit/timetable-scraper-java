@@ -115,6 +115,9 @@ public class ParsingJob {
                         continue;
                     try {
                         compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1, logger);
+                    } catch (IllegalArgumentException e) {
+                        logger.warning(String.format("Continuing despite IllegalArgumentException %s. Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s\n",
+                                e.getMessage(), course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));
                     } catch (Exception e) {
                         logger.severe(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s\n",
                                 course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));
