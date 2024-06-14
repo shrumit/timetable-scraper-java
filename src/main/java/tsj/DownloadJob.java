@@ -22,16 +22,19 @@ public class DownloadJob implements Runnable {
     static final int CAPTCHA_RETRY_LIMIT = 10;
 
     Logger logger;
-    BlockingQueue<String> subjects;
+    BlockingQueue<App.SubjectEvent> subjectsChannel;
     String outputDir;
+
+    int totalSubjects;
 
     static boolean inCaptchaState = false; // doesn't need to be volatile because it's only accessed inside synchronized blocks
     boolean captchaStateOwner = false;
 
-    public DownloadJob(Logger logger, BlockingQueue<String> courseCodes, String outputDir) {
+    public DownloadJob(Logger logger, String outputDir, BlockingQueue<App.SubjectEvent> subjectsChannel, int totalSubjects) {
         this.logger = logger;
-        this.subjects = courseCodes;
         this.outputDir = outputDir;
+        this.subjectsChannel = subjectsChannel;
+        this.totalSubjects = totalSubjects;
     }
 
     // runs until subjects is empty
@@ -42,14 +45,16 @@ public class DownloadJob implements Runnable {
 
         try {
             while (true) {
-                String subject = subjects.poll();
+                var event = subjectsChannel.poll();
+                int idx = event.idx();
+                String subject = event.subject();
                 if (subject == null) {
                     break;
                 }
 
                 // download subject page
                 Document page = downloadCoursePageWithRetry(subject);
-                logger.info(String.format("Downloaded %s to memory", subject));
+                logger.info(String.format("Downloaded %s (%s/%s) to memory", subject, idx+1, totalSubjects));
 
                 // save to file
                 String savedFilepath = CommonUtils.saveToFile(page.toString(), outputDir, subject, logger);

@@ -13,17 +13,16 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.logging.*;
 
 public class App {
 
-    static final String outputView = "master.json";
-    static final String outputSearch = "search.json";
-    static final String outputMetadata = "metadata.json";
+    static final String OutputMaster = "master.json";
+    static final String OutputSearch = "search.json";
+    static final String OutputMetadata = "metadata.json";
 
-    static final String storageDirPrefix = "dump";
-    static final String outputDirPrefix = "coutput";
+    static final String StorageDirPrefix = "dump";
+    static final String OutputDirPrefix = "coutput";
 
     static final int DEFAULT_THREADS = 3;
 
@@ -45,70 +44,87 @@ public class App {
         return options;
     }
 
-    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException, ParseException {
+    public record SubjectEvent(int idx, String subject) { }
+
+    public static void main(String[] args) throws Exception {
         System.out.println("Hello World!");
 
         CommandLine cmd = new DefaultParser().parse(createOptions(), args);
 
+        // determine runId
         String runId = cmd.getOptionValue("runId");
         if (runId == null) runId = dateTimeString();
-
         System.out.println(runId);
 
-
+        // init logger
         Logger logger = createLogger(runId, cmd.hasOption("logToFile"));
         logger.info("Logger started. runId:" + runId);
 
+        // determine dirnames
+        String storageDir = StorageDirPrefix + runId;
+        String outputDir = OutputDirPrefix + runId;
 
-        String storageDir = storageDirPrefix + runId;
-        String outputDir = outputDirPrefix + runId;
+        // determine threads count
+        String threadsArg = cmd.getOptionValue("downloadThreads");
+        int threads = threadsArg != null ? Integer.parseInt(threadsArg) : DEFAULT_THREADS;
 
+        // determine parseOnly
         boolean parseOnly = false;
         if (cmd.hasOption("parseOnly"))
             parseOnly = true;
 
+        // manual overrides for testing
 //        parseOnly = true;
-//        storageDir = "";
-//        outputDir = "";
+//        storageDir = "dump123";
+//        outputDir = "coutput123";
 
+        // download
         if (!parseOnly) {
-            // get subjects
-            List<String> subjectsList = DownloadJob.fetchSubjects();
-            logger.info("subjectsList.size():" + subjectsList.size());
-            BlockingQueue<String> subjects = new ArrayBlockingQueue<>(subjectsList.size());
-            subjects.addAll(subjectsList);
-
-
-            // spawn and execute DownloadJobs in parallel
-            String threadsArg = cmd.getOptionValue("downloadThreads");
-            int threads = threadsArg != null ? Integer.parseInt(threadsArg) : DEFAULT_THREADS;
-
-            CompletableFuture<Void>[] cfs = new CompletableFuture[threads];
-            for (int i = 0; i < cfs.length; i++) {
-                cfs[i] = CompletableFuture.runAsync(new DownloadJob(logger, subjects, storageDir));
-                logger.info("Spawned runnable:" + cfs[i].toString());
-            }
-
-
-            // wait for all of them
-            try {
-                CompletableFuture.allOf(cfs).get();
-                logger.info("All runnables ended");
-            } catch (Exception e) {
-                logger.severe(e.toString());
-                throw e;
-            }
+            download(logger, threads, storageDir);
         }
 
         // parse
-        ParsingJob pj = new ParsingJob(logger);
+        parse(logger, storageDir, outputDir);
 
-        pj.parseFromDir(storageDir);
-        pj.saveOutput(outputDir, outputView, outputSearch, outputMetadata);
 
         logger.info("Program ending normally");
         System.out.println("Bye");
         System.exit(0);
+    }
+
+    private static void download(Logger logger, int threads, String storageDir) throws Exception {
+        // get subjects
+        List<String> subjectsList = DownloadJob.fetchSubjects();
+        logger.info("subjectsList.size():" + subjectsList.size());
+        BlockingQueue<SubjectEvent> subjectsChannel = new ArrayBlockingQueue<>(subjectsList.size());
+
+        for (int i = 0; i < subjectsList.size(); i++) {
+            subjectsChannel.add(new SubjectEvent(i, subjectsList.get(i)));
+        }
+
+        // spawn and execute DownloadJobs in parallel
+        CompletableFuture<Void>[] cfs = new CompletableFuture[threads];
+        for (int i = 0; i < cfs.length; i++) {
+            cfs[i] = CompletableFuture.runAsync(new DownloadJob(
+                    logger, storageDir, subjectsChannel, subjectsList.size()));
+            logger.info("Spawned runnable:" + cfs[i].toString());
+        }
+
+        // wait for all of them
+        try {
+            CompletableFuture.allOf(cfs).get();
+            logger.info("All runnables ended");
+        } catch (Exception e) {
+            logger.severe(e.toString());
+            throw e;
+        }
+    }
+
+    private static void parse(Logger logger, String storageDir, String outputDir) throws Exception {
+        ParsingJob pj = new ParsingJob(logger);
+
+        pj.parseFromDir(storageDir);
+        pj.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
     }
 
     private static String dateTimeString() {
