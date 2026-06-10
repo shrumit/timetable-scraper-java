@@ -13,3 +13,6 @@ coutput*
 .idea/
 *.log
 *.zip
+
+.DS_Store
+*.lck

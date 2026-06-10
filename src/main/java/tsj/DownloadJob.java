@@ -1,6 +1,7 @@
 package tsj;
 
 import org.jsoup.Connection;
+import org.jsoup.Connection.Response;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -8,7 +9,9 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -153,5 +156,56 @@ public class DownloadJob implements Runnable {
         }
 
         return list;
+    }
+
+    public record Session (String cfid, String cftoken) {}
+
+    public static String builderPage = "https://draftmyschedule.uwo.ca/secure/builder.cfm";
+    public static String loginPage = "https://draftmyschedule.uwo.ca/login.cfm";
+//    public static String dmsCourseSelectionPage = "https://draftmyschedule.uwo.ca/secure/course_selection.cfm";
+    public static String userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+    public static Map<String,String> login(String uname, String pw) throws IOException {
+        System.out.println(uname);
+        System.out.println(pw);
+
+        // 1. Obtain CFID and CFTOKEN
+        Response res = Jsoup
+                .connect(loginPage)
+                .userAgent(userAgent)
+                .execute();
+
+        var resCookies = res.cookies();
+
+        String cfid = resCookies.get("CFID");
+        String cftoken = resCookies.get("CFTOKEN");
+
+        System.out.println(cfid);
+        System.out.println(cftoken);
+
+        if (cfid == null || cfid.isBlank() || cftoken == null || cftoken.isBlank()) {
+            throw new IOException(String.format("CFID or CFTOKEN cookies were not returned. cfid=%s; cftoken=%s", cfid, cftoken));
+        }
+
+        var cookies = new HashMap<String,String>();
+        cookies.put("CFID", cfid);
+        cookies.put("CFTOKEN", cftoken);
+        cookies.put("FORM_AGREEMENT", "1");
+
+        // 2. Log in
+        res = Jsoup
+                .connect(loginPage)
+                .requestBody(String.format("txtUsername=%s&txtPassword=%s&command=authenticate", uname, pw))
+                .cookies(cookies)
+                .userAgent(userAgent)
+                .followRedirects(false)
+                .method(Connection.Method.POST)
+                .execute();
+
+        System.out.println(res.statusCode());
+        System.out.println(res.statusMessage());
+        System.out.println(res.headers());
+
+        return cookies;
     }
 }

@@ -73,11 +73,19 @@ public class App {
         if (cmd.hasOption("parseOnly"))
             parseOnly = true;
 
+        // read secrets from env
+        String uname = System.getenv("UWO_UNAME");
+        String pw = System.getenv("UWO_PW");
+
         // manual overrides for testing
 //        parseOnly = true;
 //        storageDir = "dump123";
 //        outputDir = "coutput123";
+//        threads = 1;
 
+        var cookies = DownloadJob.login(uname, pw);
+
+        /*
         // download
         if (!parseOnly) {
             download(logger, threads, storageDir);
@@ -90,9 +98,14 @@ public class App {
         logger.info("Program ending normally");
         System.out.println("Bye");
         System.exit(0);
+         */
     }
 
     private static void download(Logger logger, int threads, String storageDir) throws Exception {
+        // login and get session cookies
+
+
+
         // get subjects
         List<String> subjectsList = DownloadJob.fetchSubjects();
         logger.info("subjectsList.size():" + subjectsList.size());
