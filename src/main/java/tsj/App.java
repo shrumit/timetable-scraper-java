@@ -4,12 +4,15 @@ import org.apache.commons.cli.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.File;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -41,6 +44,9 @@ public class App {
         Option parseOnly = Option.builder("parseOnly").build();
         options.addOption(parseOnly);
 
+        Option continueDownload = Option.builder("continueDownload").build();
+        options.addOption(continueDownload);
+
         return options;
     }
 
@@ -48,13 +54,14 @@ public class App {
 
     public static void main(String[] args) throws Exception {
         System.out.println("Hello World!");
+        System.out.println("args: " + Arrays.toString(args));
 
         CommandLine cmd = new DefaultParser().parse(createOptions(), args);
 
         // determine runId
         String runId = cmd.getOptionValue("runId");
         if (runId == null) runId = dateTimeString();
-        System.out.println(runId);
+        System.out.println("runID: " + runId);
 
         // init logger
         Logger logger = createLogger(runId, cmd.hasOption("logToFile"));
@@ -73,6 +80,11 @@ public class App {
         if (cmd.hasOption("parseOnly"))
             parseOnly = true;
 
+        // determine continueDownload
+        boolean continueDownload = false;
+        if (cmd.hasOption("continueDownload"))
+            continueDownload = true;
+
         // manual overrides for testing
 //        parseOnly = true;
 //        storageDir = "dump123";
@@ -80,7 +92,7 @@ public class App {
 
         // download
         if (!parseOnly) {
-            download(logger, threads, storageDir);
+            download(logger, threads, storageDir, continueDownload);
         }
 
         // parse
@@ -92,13 +104,27 @@ public class App {
         System.exit(0);
     }
 
-    private static void download(Logger logger, int threads, String storageDir) throws Exception {
+    private static void download(Logger logger, int threads, String storageDir, boolean continueDownload) throws Exception {
         // get subjects
         List<String> subjectsList = DownloadJob.fetchSubjects();
         logger.info("subjectsList.size():" + subjectsList.size());
         BlockingQueue<SubjectEvent> subjectsChannel = new ArrayBlockingQueue<>(subjectsList.size());
 
+        // if continueDownload, determine list of files already in storageDir
+        List<String> exclusionList = new ArrayList<>();
+        if (continueDownload) {
+            File[] fileList = CommonUtils.getFilesInDir(storageDir);
+            for (File f : fileList) {
+                exclusionList.add(f.getName());
+            }
+            logger.info("Exclusion list size (already-downloaded files): " + exclusionList.size());
+        }
+
         for (int i = 0; i < subjectsList.size(); i++) {
+            if (exclusionList.contains(subjectsList.get(i))) {
+                logger.info("Skipping " + subjectsList.get(i) + " because it's already downloaded");
+                continue;
+            }
             subjectsChannel.add(new SubjectEvent(i, subjectsList.get(i)));
         }
 

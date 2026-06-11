@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 public class CommonUtils {
@@ -24,6 +25,16 @@ public class CommonUtils {
         bw.write(body);
         bw.close(); // also closes fw
         return output.getCanonicalPath();
+    }
+
+    public static File[] getFilesInDir(String inputDir) {
+        File dir = new File(inputDir);
+        File[] fileList = dir.listFiles();
+        if (fileList == null || fileList.length == 0) {
+            return new File[0];
+        }
+        Arrays.sort(fileList);
+        return fileList;
     }
 
 }

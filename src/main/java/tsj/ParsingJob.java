@@ -36,9 +36,10 @@ public class ParsingJob {
     }
 
     public void parseFromDir(String inputDir) throws IOException {
-        File dir = new File(inputDir);
-        File[] fileList = dir.listFiles();
-        Arrays.sort(fileList);
+        File[] fileList = CommonUtils.getFilesInDir(inputDir);
+        if (fileList.length == 0) {
+            throw new IllegalArgumentException("inputDir is nonexistent or empty");
+        }
 
         logger.info("Number of files in dir:" + fileList.length);
 

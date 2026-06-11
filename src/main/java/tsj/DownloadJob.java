@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -142,8 +143,11 @@ public class DownloadJob implements Runnable {
     }
 
     public static List<String> fetchSubjects() throws IOException {
-        Document doc = Jsoup.connect(URL).get();
-        Element inputSubject = doc.getElementById("inputSubject");
+        Document page = Jsoup.connect(URL).get();
+        if (!page.getElementsContainingOwnText("captcha").isEmpty()) {
+            throw new RuntimeException("Hit captcha in the fetch subjects page. Exiting now!");
+        }
+        Element inputSubject = page.getElementById("inputSubject");
         Elements codes = inputSubject.getElementsByTag("option");
         List<String> list = new ArrayList<>();
         for (var code : codes) {
