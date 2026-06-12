@@ -7,6 +7,8 @@ public class Section {
     public static final String[] daysLabel = {"M", "Tu", "W", "Th", "F"};
     public static final String[] daysLabelLong = {"Mon", "Tue", "Wed", "Thu", "Fri"};
 
+    public enum Days {MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY}
+
     public String name;
     public String number;
     public String location;
@@ -44,6 +46,10 @@ public class Section {
             if (n != 0)
                 return true;
         return false;
+    }
+
+    public void addTime(String startStr, String endStr, Days day, Logger logger) {
+        addTime(startStr, endStr, day.ordinal(), logger);
     }
 
     public void addTime(String startStr, String endStr, int dayIdx, Logger logger) {

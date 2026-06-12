@@ -72,57 +72,54 @@ public class ParsingJob {
             // for every row in course table
             for (Element row : rows) {
 
-                // parse names
+                /* read values */
                 Elements td = row.select("> td");
                 String sectionName = td.get(0).text();
                 String compName = td.get(1).text();
+                String number = td.get(2).text();
+                String location = td.get(6).text();
+                String instructor = td.get(7).text();
+                String campus = td.get(10).text();
+                String delivery = td.get(11).text();
 
-                if (!compMap.containsKey(compName)) {
-                    // encountered a new component
-                    compMap.put(compName, new LinkedHashMap<>());
-                }
-                if (!compMap.get(compName).containsKey(sectionName)) {
-                    // encountered a new section
-                    Section section = new Section(sectionName);
-                    section.number = td.get(2).text();
-                    section.location = td.get(6).text();
-                    section.instructor = td.get(7).text();
-                    section.campus = td.get(10).text();
-                    section.delivery = td.get(11).text();
-                    compMap.get(compName).put(sectionName, section);
-                    metadataBuilder.submitCampusType(section.campus);
-                    metadataBuilder.submitDeliveryType(section.delivery);
-                }
-
-                // parse time
                 String startTime = td.get(4).text().trim();
                 String endTime = td.get(5).text().trim();
-
-                if (startTime.length() == 0 || endTime.length() == 0)
-                    continue;
-
                 // fix exceptions
                 if (startTime.equals("7:00 AM"))
                     startTime = "8:00 AM";
                 if (endTime.equals("10:30 PM"))
                     endTime = "10:00 PM";
 
-                Elements days = td.get(3).getElementsByTag("td");
+                Elements daysCols = td.get(3).getElementsByTag("td");
+                List<Section.Days> days = new ArrayList<>();
+                for (int j = 1; j < daysCols.size(); j++) {
+                    String dayText = daysCols.get(j).text();
+                    if (dayText.isBlank() || dayText.equals("\u00a0"))
+                        continue;
+                    days.add(Section.Days.values()[j - 1]);
+                }
+
+                /* store values */
+                if (!compMap.containsKey(compName)) {
+                    // encountered a new component
+                    compMap.put(compName, new LinkedHashMap<>());
+                }
+                if (!compMap.get(compName).containsKey(sectionName)) {
+                    // encountered a new section
+                    Section section = new Section(sectionName, number, location, instructor, campus, delivery);
+                    compMap.get(compName).put(sectionName, section);
+                    metadataBuilder.submitCampusType(campus);
+                    metadataBuilder.submitDeliveryType(delivery);
+                }
+
+                if (startTime.length() == 0 || endTime.length() == 0)
+                    continue;
+
+                Section section = compMap.get(compName).get(sectionName);
 
                 // figure out which days have the timeslot and add it to the Section
-                for (int j = 1; j < days.size(); j++) {
-                    if (days.get(j).text().isBlank() || days.get(j).text().equals("\u00a0"))
-                        continue;
-                    try {
-                        compMap.get(compName).get(sectionName).addTime(startTime, endTime, j - 1, logger);
-                    } catch (IllegalArgumentException e) {
-                        logger.warning(String.format("Continuing despite IllegalArgumentException %s. Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s\n",
-                                e.getMessage(), course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));
-                    } catch (Exception e) {
-                        logger.severe(String.format("Context: %s, %s, %s, startTime: %s, endTime: %s, j: %s, section.timeFull: %s, days.get(j).text():%s\n",
-                                course.name, compName, sectionName, startTime, endTime, j, compMap.get(compName).get(sectionName).timeFull, days.get(j).text()));
-                        throw e;
-                    }
+                for (Section.Days day : days) {
+                    section.addTime(startTime, endTime, day, logger);
                 }
             } // done parsing all sections of the course's table
 
@@ -146,7 +143,8 @@ public class ParsingJob {
         }
     }
 
-    public void saveOutput(String outputDir, String outputView, String outputSearch, String outputMetadata) throws IOException {
+    public void saveOutput(String outputDir, String outputView, String outputSearch, String outputMetadata) throws
+            IOException {
         CommonUtils.saveToFile(produceViewDataJson(), outputDir, outputView, logger);
         CommonUtils.saveToFile(produceSearchDataJson(), outputDir, outputSearch, logger);
         CommonUtils.saveToFile(produceMetadataJson(), outputDir, outputMetadata, logger);
