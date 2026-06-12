@@ -147,10 +147,12 @@ public class App {
     }
 
     private static void parse(Logger logger, String storageDir, String outputDir) throws Exception {
-        ParsingJob pj = new ParsingJob(logger);
+        DataManager dm = new DataManager(logger);
 
+        ATParser pj = new ATParser(logger, dm);
         pj.parseFromDir(storageDir);
-        pj.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
+
+        dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
     }
 
     private static String dateTimeString() {

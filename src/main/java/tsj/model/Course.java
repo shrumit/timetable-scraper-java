@@ -12,14 +12,22 @@ public class Course implements Comparable<Course> {
     public String name;
     public List<Component> components;
 
-    public Course(String name) {
-        this(name, -1);
-    }
-
     public Course(String name, int id) {
         this.id = id;
         this.name = name;
-        components = new ArrayList<Component>();
+        components = new ArrayList<>();
+    }
+
+    public Component getComponent(String compName) {
+        for (Component c : components) {
+            if (c.name.equals(compName))
+                return c;
+        }
+        return null;
+    }
+
+    public void addComponent(Component comp) {
+        components.add(comp);
     }
 
     @Override

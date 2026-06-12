@@ -16,4 +16,15 @@ public class Component {
         sections = new ArrayList<Section>();
     }
 
+    public Section getSection(String sectionName) {
+        for (Section s : sections) {
+            if (s.name.equals(sectionName))
+                return s;
+        }
+        return null;
+    }
+
+    public void addSection(Section section) {
+        sections.add(section);
+    }
 }
