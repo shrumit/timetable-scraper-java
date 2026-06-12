@@ -28,8 +28,7 @@ public class ParsingJob {
     Logger logger;
 
     List<Course> courses = new ArrayList<>();
-    Map<String,Integer> campusTypes = new HashMap<>();
-    Map<String,Integer> deliveryTypes = new HashMap<>();
+    Metadata.MetadataBuilder metadataBuilder = new Metadata.MetadataBuilder();
 
     public ParsingJob(Logger logger) {
         this.logger = logger;
@@ -41,7 +40,7 @@ public class ParsingJob {
             throw new IllegalArgumentException("inputDir is nonexistent or empty");
         }
 
-        logger.info("Number of files in dir:" + fileList.length);
+        logger.info("Number of files in dir " + inputDir + " :" + fileList.length);
 
         for (File file : fileList) {
             parseFromFile(file);
@@ -75,8 +74,8 @@ public class ParsingJob {
 
                 // parse names
                 Elements td = row.select("> td");
-                String compName = td.get(1).text();
                 String sectionName = td.get(0).text();
+                String compName = td.get(1).text();
 
                 if (!compMap.containsKey(compName)) {
                     // encountered a new component
@@ -89,10 +88,10 @@ public class ParsingJob {
                     section.location = td.get(6).text();
                     section.instructor = td.get(7).text();
                     section.campus = td.get(10).text();
-                    campusTypes.put(section.campus, 1 + campusTypes.getOrDefault(section.campus, 0));
                     section.delivery = td.get(11).text();
-                    deliveryTypes.put(section.delivery, 1 + deliveryTypes.getOrDefault(section.delivery, 0));
                     compMap.get(compName).put(sectionName, section);
+                    metadataBuilder.submitCampusType(section.campus);
+                    metadataBuilder.submitDeliveryType(section.delivery);
                 }
 
                 // parse time
@@ -156,18 +155,7 @@ public class ParsingJob {
 
     public String produceMetadataJson() {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-
-        // sort campusTypes by descending frequency
-        List<String> ct = new ArrayList<>();
-        ct.addAll(campusTypes.keySet());
-        Collections.sort(ct, (a,b) -> Integer.compare(campusTypes.get(b), campusTypes.get(a)));
-
-        // sort deliveryTypes by descending frequency
-        List<String> dt = new ArrayList<>();
-        dt.addAll(deliveryTypes.keySet());
-        Collections.sort(dt, (a,b) -> Integer.compare(deliveryTypes.get(b), deliveryTypes.get(a)));
-
-        return gson.toJson(new Metadata(ct, dt));
+        return gson.toJson(metadataBuilder.build());
     }
 
     public String produceViewDataJson() {

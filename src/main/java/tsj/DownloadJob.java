@@ -47,11 +47,13 @@ public class DownloadJob implements Runnable {
         try {
             while (true) {
                 var event = subjectsChannel.poll();
-                int idx = event.idx();
-                String subject = event.subject();
-                if (subject == null) {
+                if (event == null) {
+                    // queue is empty now
                     break;
                 }
+
+                int idx = event.idx();
+                String subject = event.subject();
 
                 // download subject page
                 Document page = downloadCoursePageWithRetry(subject);
