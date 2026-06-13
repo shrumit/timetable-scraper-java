@@ -41,6 +41,12 @@ public class DataManager {
                           String endTime
     ) {
 
+        System.out.printf("submitRow: courseName=%s, componentName=%s, sectionName=%s, "
+                        + "number=%s, instructor=%s, campus=%s, delivery=%s, location=%s, "
+                        + "days=%s, startTime=%s, endTime=%s%n",
+                courseName, componentName, sectionName, number, instructor, campus,
+                delivery, location, days, startTime, endTime);
+
         if (!courses.containsKey(courseName)) {
             courses.put(courseName, new Course(courseName, nextUnusedCourseId++));
         }
@@ -58,6 +64,7 @@ public class DataManager {
         Section sec = comp.getSection(sectionName);
         if (sec == null) {
             sec = new Section(sectionName, number, location, instructor, campus, delivery);
+            comp.addSection(sec);
         }
 
         // no need to add times if empty

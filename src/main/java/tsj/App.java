@@ -1,18 +1,21 @@
 package tsj;
 
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.File;
 import java.io.StringWriter;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -47,6 +50,9 @@ public class App {
         Option continueDownload = Option.builder("continueDownload").build();
         options.addOption(continueDownload);
 
+        Option newMode = Option.builder("newMode").build();
+        options.addOption(newMode);
+
         return options;
     }
 
@@ -70,6 +76,22 @@ public class App {
         // determine dirnames
         String storageDir = StorageDirPrefix + runId;
         String outputDir = OutputDirPrefix + runId;
+
+        if (cmd.hasOption("newMode")) {
+            String uname = System.getenv("UWO_UNAME");
+            String pw = System.getenv("UWO_PW");
+            System.out.println(uname);
+            System.out.println(pw);
+            Login.Creds c = Login.getCreds(uname, pw);
+            System.out.println(c.toString());
+
+            DataManager dm = new DataManager(logger);
+            NewScraper ns = new NewScraper(logger, dm, c);
+            ns.scrape();
+
+            dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
+            return;
+        }
 
         // determine threads count
         String threadsArg = cmd.getOptionValue("downloadThreads");
