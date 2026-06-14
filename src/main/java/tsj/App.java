@@ -77,18 +77,16 @@ public class App {
         String storageDir = StorageDirPrefix + runId;
         String outputDir = OutputDirPrefix + runId;
 
+        // branch to new scraper
         if (cmd.hasOption("newMode")) {
+            logger.info("Scraping in new mode");
             String uname = System.getenv("UWO_UNAME");
             String pw = System.getenv("UWO_PW");
-            System.out.println(uname);
-            System.out.println(pw);
             Login.Creds c = Login.getCreds(uname, pw);
-            System.out.println(c.toString());
 
             DataManager dm = new DataManager(logger);
             NewScraper ns = new NewScraper(logger, dm, c);
             ns.scrape();
-
             dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
             return;
         }

@@ -41,11 +41,11 @@ public class DataManager {
                           String endTime
     ) {
 
-        System.out.printf("submitRow: courseName=%s, componentName=%s, sectionName=%s, "
-                        + "number=%s, instructor=%s, campus=%s, delivery=%s, location=%s, "
-                        + "days=%s, startTime=%s, endTime=%s%n",
-                courseName, componentName, sectionName, number, instructor, campus,
-                delivery, location, days, startTime, endTime);
+//        System.out.printf("submitRow: courseName=%s, componentName=%s, sectionName=%s, "
+//                        + "number=%s, instructor=%s, campus=%s, delivery=%s, location=%s, "
+//                        + "days=%s, startTime=%s, endTime=%s%n",
+//                courseName, componentName, sectionName, number, instructor, campus,
+//                delivery, location, days, startTime, endTime);
 
         if (!courses.containsKey(courseName)) {
             courses.put(courseName, new Course(courseName, nextUnusedCourseId++));
