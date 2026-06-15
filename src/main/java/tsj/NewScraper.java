@@ -83,7 +83,7 @@ public class NewScraper {
                     .execute()
                     .parse();
 
-            var courseNames = doc.select("caption > h4").eachText();
+            var courseNames = doc.select("h4").eachText();
             var courseTables = doc.select("table.table-hover");
 
             if (courseNames.size() != courseTables.size() - 1) {
@@ -96,7 +96,6 @@ public class NewScraper {
                 String courseName = courseNames.get(i);
                 Element table = courseTables.get(i);
 
-                logger.info("Now parsing " + courseName);
                 logger.info(String.format("Parsing course %s of %s: %s", i, courseNames.size() - 1, courseName));
 
                 for (Element row : table.select("> tbody > tr:not(.active)")) {
@@ -108,38 +107,31 @@ public class NewScraper {
                         continue; // skip malformed/empty rows
                     }
 
-//                    int idx = 0;
-//                    for (var c : cells) {
-//                        int i = idx++;
-//                        System.out.println(i + ":" + c.text().trim());
-//                        System.out.println(i + ":" + c.outerHtml());
-//                    }
-
                     String componentName = cells.get(0).text().trim();
                     String sectionName = cells.get(1).text().trim();
                     String number = cells.get(2).text().trim();
                     String instructor = cells.get(3).text().trim();   // may be empty
-                    // cells.get(4) = Requisites and Constraints, cells.get(6) = Credit Units, get(7) = Status, get(8) = Waitlist
-
-                    // date, time, location table
-                    Elements dtlCells = cells.get(5).selectFirst("table tr").children();
-                    List<Section.Days> days = parseDays(dtlCells.get(0).text());
-                    String[] times = dtlCells.get(1).text().split("-");
-                    if (days.isEmpty() || times.length == 0) {
-                        logger.warning(String.format("Skipped row because parsed days/time was empty for course: %s, subject: %s", courseName, subjectCode));
-                        continue;
-                    }
-
-                    String startTime = times[0].trim();
-                    String endTime = times[1].trim();
-                    String location = dtlCells.get(2).text().trim();
-
                     String campus = cells.get(9).text().trim();
                     String delivery = cells.get(10).text().trim();
+                    // cells.get(4) = Requisites and Constraints, cells.get(6) = Credit Units, get(7) = Status, get(8) = Waitlist
 
-                    dm.submitRow(courseName, subjectCode, componentName, sectionName, number,
-                            instructor, campus, delivery, location,
-                            days, startTime, endTime);
+                    // parse each row of the date/time/location table
+                    for (var dtlRow : cells.get(5).select("table tr")) {
+                        Elements dtlCells = dtlRow.children();
+                        List<Section.Days> days = parseDays(dtlCells.get(0).text());
+                        String[] times = dtlCells.get(1).text().split("-");
+                        if (days.isEmpty() || times.length == 0) {
+                            logger.warning(String.format("Skipped row because parsed days/time was empty for course: %s, subject: %s", courseName, subjectCode));
+                            continue;
+                        }
+                        String startTime = times[0].trim();
+                        String endTime = times[1].trim();
+                        String location = dtlCells.get(2).text().trim();
+
+                        dm.submitRow(courseName, subjectCode, componentName, sectionName, number,
+                                instructor, campus, delivery, location,
+                                days, startTime, endTime);
+                    }
                 }
 
                 logger.info("Finished parsing course: " + courseName);

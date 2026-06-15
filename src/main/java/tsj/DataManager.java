@@ -90,7 +90,7 @@ public class DataManager {
 
         // add times denoted by the row
         for (Section.Days day : days) {
-            sec.addTime(startTime, endTime, day, logger);
+            sec.addTime(startTime, endTime, day, location, logger);
         }
 
         metadataBuilder.submitCampusType(campus);
@@ -100,6 +100,7 @@ public class DataManager {
     public void saveOutput(String outputDir, String masterFileName, String searchFileName, String metadataFileName, String subjectsFilename) throws
             IOException {
         List<Course> coursesList = new ArrayList<>(courses.values());
+        coursesList.sort((a,b) -> Integer.compare(a.id, b.id));
         coursesList.removeIf(course -> {
             // remove courses with empty components
             if (course.components.isEmpty()) {
@@ -110,6 +111,7 @@ public class DataManager {
         });
 
         List<Subject> subjectsList = new ArrayList<>(subjects.values());
+        subjectsList.sort((a,b) -> Integer.compare(a.id, b.id));
 
         CommonUtils.saveToFile(produceMasterJson(coursesList), outputDir, masterFileName, logger);
         CommonUtils.saveToFile(produceSearchJson(coursesList), outputDir, searchFileName, logger);

@@ -3,10 +3,10 @@ package tsj.model;
 import java.util.logging.Logger;
 
 public class Subject {
-    boolean atMain = false, atKings = false, atHuron = false;
-    String code;
-    String name;
-    int id;
+    public boolean atMain = false, atKings = false, atHuron = false;
+    public String code;
+    public String name;
+    public int id;
 
     public Subject(Logger logger, String code, String name, String campusListRaw, int id) {
         this.code = code;

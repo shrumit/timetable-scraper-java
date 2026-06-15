@@ -48,11 +48,15 @@ public class Section {
         return false;
     }
 
-    public void addTime(String startStr, String endStr, Days day, Logger logger) {
-        addTime(startStr, endStr, day.ordinal(), logger);
+    public void addTime(String startStr, String endStr, Days day, String location, Logger logger) {
+        addTime(startStr, endStr, day.ordinal(), location,logger);
     }
 
-    public void addTime(String startStr, String endStr, int dayIdx, Logger logger) {
+    public void addTime(String startStr, String endStr, int dayIdx, String location, Logger logger) {
+        if (!this.location.equals(location)) {
+            throw new IllegalArgumentException("different locations same section");
+        }
+
         if (dayIdx > 4 || dayIdx < 0)
             throw new IllegalArgumentException("dayIdx not proper");
         int start = convertStringToInterval(startStr);
