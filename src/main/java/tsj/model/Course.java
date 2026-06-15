@@ -1,9 +1,9 @@
 package tsj.model;
 
+import com.google.gson.annotations.Expose;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.gson.annotations.Expose;
 
 public class Course implements Comparable<Course> {
     @Expose
@@ -11,6 +11,7 @@ public class Course implements Comparable<Course> {
     @Expose
     public String name;
     public List<Component> components;
+    public Subject subject;
 
     public Course(String name, int id) {
         this.id = id;

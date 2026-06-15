@@ -52,7 +52,9 @@ public class NewScraper {
         logger.info("Number of courses found:" + urls.size());
 
         /* For each course, download and parse */
-        for (String url : urls) {
+        for (int i = 0; i < urls.size(); i++) {
+            String url = urls.get(i);
+            logger.info(String.format("Downloading page %s of %s: %s", i, urls.size()-1, url));
             Document doc = Jsoup.connect(url)
                     .cookie("CFID", creds.cfid())
                     .cookie("CFTOKEN", creds.cftoken())
@@ -98,36 +100,28 @@ public class NewScraper {
 //                    }
 
                     String componentName = cells.get(0).text().trim();
-                    String sectionName   = cells.get(1).text().trim();
-                    String number        = cells.get(2).text().trim();
-                    String instructor    = cells.get(3).text().trim();   // may be empty
+                    String sectionName = cells.get(1).text().trim();
+                    String number = cells.get(2).text().trim();
+                    String instructor = cells.get(3).text().trim();   // may be empty
 
                     // cells.get(4) = Requisites and Constraints, cells.get(6) = Credit Units, get(7) = Status, get(8) = Waitlist
 
-                    String daysRaw   = "";
-                    String startTime = "";
-                    String endTime   = "";
-                    String location  = "";
-                    Element dtl = cells.get(5).selectFirst("table tr");
-                    if (dtl != null) {
-                        Elements dtlCells = dtl.children();
-                        if (dtlCells.size() >= 3) {
-                            daysRaw  = dtlCells.get(0).text();
-                            location = dtlCells.get(2).text().trim();
+                    // parse date, time, location table
+                    Elements dtlCells = cells.get(5).selectFirst("table tr").children();
 
-                            String[] times = dtlCells.get(1).text().split("-");
-                            startTime = times[0].trim();
-                            endTime   = times.length > 1 ? times[1].trim() : "";
-                        }
+                    List<Section.Days> days = parseDays(dtlCells.get(0).text());
+                    String[] times = dtlCells.get(1).text().split("-");
+                    if (days.isEmpty() || times.length == 0) {
+                        logger.warning(String.format("Skipped row because parsed days/time was empty for course: %s, URL: %s", courseName, url));
+                        continue;
                     }
 
-                    String campus   = cells.get(9).text().trim();
+                    String startTime = times[0].trim();
+                    String endTime = times[1].trim();
+                    String location = dtlCells.get(2).text().trim();
+
+                    String campus = cells.get(9).text().trim();
                     String delivery = cells.get(10).text().trim();
-
-                    List<Section.Days> days = parseDays(daysRaw);
-                    if (days.isEmpty()) {
-                        logger.warning("Parsed days was empty:" + table.outerHtml());
-                    }
 
                     dm.submitRow(courseName, componentName, sectionName, number,
                             instructor, campus, delivery, location,
@@ -158,11 +152,11 @@ public class NewScraper {
 
         for (String token : cleaned.split(" ")) {
             switch (token) {
-                case "M"  -> result.add(Section.Days.MONDAY);
+                case "M" -> result.add(Section.Days.MONDAY);
                 case "Tu" -> result.add(Section.Days.TUESDAY);
-                case "W"  -> result.add(Section.Days.WEDNESDAY);
+                case "W" -> result.add(Section.Days.WEDNESDAY);
                 case "Th" -> result.add(Section.Days.THURSDAY);
-                case "F"  -> result.add(Section.Days.FRIDAY);
+                case "F" -> result.add(Section.Days.FRIDAY);
             }
         }
         return result;
