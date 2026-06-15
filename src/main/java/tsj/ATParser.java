@@ -85,7 +85,7 @@ public class ATParser {
                 }
 
                 /* store values */
-                dm.submitRow(courseName, compName, sectionName, number, instructor, campus, delivery, location, days, startTime, endTime);
+                dm.submitRow(courseName, null, compName, sectionName, number, instructor, campus, delivery, location, days, startTime, endTime);
             } // done parsing all sections of the course's table
 
         }

@@ -19,7 +19,9 @@ public class DataManager {
     Logger logger;
 
     Map<String, Course> courses = new HashMap<>();
+    Map<String, Subject> subjects = new HashMap<>();
     int nextUnusedCourseId = 0;
+    int nextUnusedSubjectId = 0;
     Metadata.MetadataBuilder metadataBuilder = new Metadata.MetadataBuilder();
 
     // The purpose of this class is to decouple the data extraction from the data processing.
@@ -28,7 +30,14 @@ public class DataManager {
         this.logger = logger;
     }
 
+    public void submitSubject(String subjectCode, String subjectName, String campusListRaw) {
+        if (!subjects.containsKey(subjectCode)) {
+            subjects.put(subjectCode, new Subject(logger, subjectCode, subjectName, campusListRaw, nextUnusedSubjectId++));
+        }
+    }
+
     public void submitRow(String courseName,
+                          String subjectCode,
                           String componentName,
                           String sectionName,
                           String number,
@@ -41,14 +50,20 @@ public class DataManager {
                           String endTime
     ) {
 
-//        System.out.printf("submitRow: courseName=%s, componentName=%s, sectionName=%s, "
-//                        + "number=%s, instructor=%s, campus=%s, delivery=%s, location=%s, "
-//                        + "days=%s, startTime=%s, endTime=%s%n",
-//                courseName, componentName, sectionName, number, instructor, campus,
-//                delivery, location, days, startTime, endTime);
+        String debugPrint = String.format("submitRow: courseName=%s, subjectCode=%s, componentName=%s, sectionName=%s, "
+                        + "number=%s, instructor=%s, campus=%s, delivery=%s, location=%s, "
+                        + "days=%s, startTime=%s, endTime=%s",
+                courseName, subjectCode, componentName, sectionName, number, instructor, campus,
+                delivery, location, days, startTime, endTime);
+
+        var subject = subjects.get(subjectCode);
+        if (subject == null) {
+            logger.severe(String.format("subjectCode not found. debugPrint: %s", debugPrint));
+            throw new IllegalArgumentException("subjectCode not found");
+        }
 
         if (!courses.containsKey(courseName)) {
-            courses.put(courseName, new Course(courseName, nextUnusedCourseId++));
+            courses.put(courseName, new Course(courseName, subject, nextUnusedCourseId++));
         }
 
         Course course = courses.get(courseName);
@@ -82,10 +97,9 @@ public class DataManager {
         metadataBuilder.submitDeliveryType(delivery);
     }
 
-    public void saveOutput(String outputDir, String viewFileName, String searchFileName, String metadataFileName) throws
+    public void saveOutput(String outputDir, String masterFileName, String searchFileName, String metadataFileName, String subjectsFilename) throws
             IOException {
         List<Course> coursesList = new ArrayList<>(courses.values());
-
         coursesList.removeIf(course -> {
             // remove courses with empty components
             if (course.components.isEmpty()) {
@@ -95,23 +109,26 @@ public class DataManager {
             return false;
         });
 
-        CommonUtils.saveToFile(produceViewDataJson(coursesList), outputDir, viewFileName, logger);
-        CommonUtils.saveToFile(produceSearchDataJson(coursesList), outputDir, searchFileName, logger);
-        CommonUtils.saveToFile(produceMetadataJson(), outputDir, metadataFileName, logger);
+        List<Subject> subjectsList = new ArrayList<>(subjects.values());
+
+        CommonUtils.saveToFile(produceMasterJson(coursesList), outputDir, masterFileName, logger);
+        CommonUtils.saveToFile(produceSearchJson(coursesList), outputDir, searchFileName, logger);
+        CommonUtils.saveToFile(produceMetadataJson(metadataBuilder.build()), outputDir, metadataFileName, logger);
+        CommonUtils.saveToFile(produceSubjectJson(subjectsList), outputDir, subjectsFilename, logger);
         logger.info(String.format("Saved output for %s courses to %s", courses.size(), outputDir));
     }
 
-    private String produceMetadataJson() {
+    private static String produceMetadataJson(Metadata m) {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-        return gson.toJson(metadataBuilder.build());
+        return gson.toJson(m);
     }
 
-    private String produceViewDataJson(List<Course> coursesList) {
-        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+    private static String produceMasterJson(List<Course> coursesList) {
+        Gson gson = new GsonBuilder().disableHtmlEscaping().registerTypeAdapter(Subject.class, new SubjectSerializer()).create();
         return gson.toJson(coursesList);
     }
 
-    private String produceSearchDataJson(List<Course> coursesList) {
+    private static String produceSearchJson(List<Course> coursesList) {
         Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         StringJoiner termA = new StringJoiner(",", "[", "]");
         StringJoiner termB = new StringJoiner(",", "[", "]");
@@ -141,5 +158,10 @@ public class DataManager {
             }
         }
         return "[" + termA + "," + termB + "]";
+    }
+
+    private static String produceSubjectJson(List<Subject> subjectsList) {
+        Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+        return gson.toJson(subjectsList);
     }
 }

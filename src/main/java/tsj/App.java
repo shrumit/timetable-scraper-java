@@ -26,6 +26,7 @@ public class App {
     static final String OutputMaster = "master.json";
     static final String OutputSearch = "search.json";
     static final String OutputMetadata = "metadata.json";
+    static final String OutputSubjects = "subjects.json";
 
     static final String StorageDirPrefix = "dump";
     static final String OutputDirPrefix = "coutput";
@@ -87,7 +88,7 @@ public class App {
             DataManager dm = new DataManager(logger);
             NewScraper ns = new NewScraper(logger, dm, c);
             ns.scrape();
-            dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
+            dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata, OutputSubjects);
             return;
         }
 
@@ -172,7 +173,7 @@ public class App {
         ATParser pj = new ATParser(logger, dm);
         pj.parseFromDir(storageDir);
 
-        dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata);
+        dm.saveOutput(outputDir, OutputMaster, OutputSearch, OutputMetadata, OutputSubjects);
     }
 
     private static String dateTimeString() {

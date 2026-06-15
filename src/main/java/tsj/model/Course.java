@@ -13,9 +13,10 @@ public class Course implements Comparable<Course> {
     public List<Component> components;
     public Subject subject;
 
-    public Course(String name, int id) {
+    public Course(String name, Subject subject, int id) {
         this.id = id;
         this.name = name;
+        this.subject = subject;
         components = new ArrayList<>();
     }
 

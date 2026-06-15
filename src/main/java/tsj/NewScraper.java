@@ -1,5 +1,6 @@
 package tsj;
 
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
@@ -24,65 +25,80 @@ public class NewScraper {
 
     public void scrape() throws IOException {
 
-        /* Get list of all individual course URLs */
-        Document allCoursesDoc = Jsoup.connect("https://www.westerncalendar.uwo.ca/AllCourses.cfm?SelectedCalendar=Live&ArchiveID=")
+        // 1. Get all subject codes
+        Document doc = Jsoup.connect("https://draftmyschedule.uwo.ca/secure/builder.cfm")
                 .maxBodySize(40 * 1024 * 1024) // 40 MB limit, up from the default of 2 MB
-                .data("SubjectFilter", "")
-                .data("SelectedCalendar", "Live")
-                .data("ArchiveID", "")
-                .data("ShowCourses", "1")
-                .post();
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("cache-control", "no-cache")
+                .header("priority", "u=0")
+                .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                        "Chrome/149.0.0.0 Safari/537.36")
+                .cookie("CFID", creds.cfid())
+                .cookie("CFTOKEN", creds.cftoken())
+                .cookie("FORM_AGREEMENT", "1")
+                .get();
 
-        List<String> cacIDs = allCoursesDoc.select("a:containsOwn(More details)").stream()
-                .map(a -> a.absUrl("href"))
-                .map(a -> getQueryParamValue(a, "CourseAcadCalendarID"))
-                .toList();
-
-        List<String> urls = new ArrayList<>();
-
-        for (String c : cacIDs) {
-            if (c == null) {
-                logger.warning("got a null CourseAcadCalendarID");
-                continue;
-            }
-
-            urls.add(String.format("https://draftmyschedule.uwo.ca/secure/courses.cfm?CourseAcadCalendarID=%s&SelectedCalendar=Live&referer_link=Course_listing&ArchiveID=", c));
+        Element select = doc.selectFirst("select#Subject");
+        if (select == null) {
+            System.out.println("Select element not found.");
+            return;
         }
 
-        logger.info("Number of courses found:" + urls.size());
+        List<String> subjectCodes = new ArrayList<>();
 
-        /* For each course, download and parse */
-        for (int i = 0; i < urls.size(); i++) {
-            String url = urls.get(i);
-            logger.info(String.format("Downloading page %s of %s: %s", i, urls.size()-1, url));
-            Document doc = Jsoup.connect(url)
+        Elements options = select.select("option");
+        for (int i = 1; i < options.size(); i++) {   // start at 1 to skip index 0
+            Element option = options.get(i);
+            String cls = option.attr("class");
+            String value = option.attr("value");
+            String text = option.text().trim();            // normalized innerText
+
+            System.out.printf("class=%s | value=%s | text=%s%n", cls, value, text);
+            dm.submitSubject(value, text, cls);
+            subjectCodes.add(value);
+        }
+
+        // 2. For each subject, get all its courses
+        for (int j = 0; j < subjectCodes.size(); j++) {
+            String subjectCode = subjectCodes.get(j);
+            logger.info(String.format("Downloading subject page %s of %s: %s", j, subjectCodes.size() - 1, subjectCode));
+
+            doc = Jsoup.connect("https://draftmyschedule.uwo.ca/secure/builder.cfm")
+                    .maxBodySize(40 * 1024 * 1024) // 40 MB limit, up from the default of 2 MB
+                    .method(Connection.Method.POST)
+                    .header("content-type", "application/x-www-form-urlencoded")
+                    .header("cache-control", "no-cache")
+                    .header("priority", "u=0")
+                    .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+                            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                            "Chrome/149.0.0.0 Safari/537.36")
                     .cookie("CFID", creds.cfid())
                     .cookie("CFTOKEN", creds.cftoken())
-                    .get();
+                    .cookie("FORM_AGREEMENT", "1")
+                    .requestBody(String.format("version_id=&Subject=%s&delivery_type=All&catalog_nbr_typed=&catalog_nbr=" +
+                            "&day=m&day=tu&day=w&day=th&day=f&Designation=Any&start_time=&end_time=" +
+                            "&Campus=Any&course_component=LEC&course_component=TUT&course_component=LAB" +
+                            "&command_search=search", subjectCode))
+                    .execute()
+                    .parse();
 
-            // parse each course offering
-            for (Element table : doc.select("table.table-hover")) {
+            var courseNames = doc.select("caption > h4").eachText();
+            var courseTables = doc.select("table.table-hover");
 
-                // parse course name
-                Element heading = table.previousElementSibling();
-                while (heading != null && !heading.tagName().equals("h4")) {
-                    heading = heading.previousElementSibling();
-                }
-                // fallback: search up to the wrapping div if needed.
-                if (heading == null) {
-                    Element parent = table.parent();
-                    if (parent != null) heading = parent.selectFirst("h4");
-                }
-                String courseName = heading != null ? heading.text().trim() : "";
-                if (courseName.isEmpty()) {
-                    logger.severe("courseName not parsed. doc.outerHTML():" + doc.outerHtml());
-                    throw new RuntimeException();
-                }
+            if (courseNames.size() != courseTables.size() - 1) {
+                logger.severe("mismatched sizes of courseNames and courseTables. outerHTML of page:" + doc.outerHtml());
+                throw new IllegalArgumentException();
+            }
+
+            // 3. For each course, parse its timetable
+            for (int i = 0; i < courseNames.size(); i++) {
+                String courseName = courseNames.get(i);
+                Element table = courseTables.get(i);
+
                 logger.info("Now parsing " + courseName);
+                logger.info(String.format("Parsing course %s of %s: %s", i, courseNames.size() - 1, courseName));
 
-                int numRows = 0;
-
-                // parse each row of table
                 for (Element row : table.select("> tbody > tr:not(.active)")) {
                     // Direct child <td> cells only — avoids the nested days/times table.
                     Elements cells = row.children();
@@ -103,16 +119,14 @@ public class NewScraper {
                     String sectionName = cells.get(1).text().trim();
                     String number = cells.get(2).text().trim();
                     String instructor = cells.get(3).text().trim();   // may be empty
-
                     // cells.get(4) = Requisites and Constraints, cells.get(6) = Credit Units, get(7) = Status, get(8) = Waitlist
 
-                    // parse date, time, location table
+                    // date, time, location table
                     Elements dtlCells = cells.get(5).selectFirst("table tr").children();
-
                     List<Section.Days> days = parseDays(dtlCells.get(0).text());
                     String[] times = dtlCells.get(1).text().split("-");
                     if (days.isEmpty() || times.length == 0) {
-                        logger.warning(String.format("Skipped row because parsed days/time was empty for course: %s, URL: %s", courseName, url));
+                        logger.warning(String.format("Skipped row because parsed days/time was empty for course: %s, subject: %s", courseName, subjectCode));
                         continue;
                     }
 
@@ -123,13 +137,14 @@ public class NewScraper {
                     String campus = cells.get(9).text().trim();
                     String delivery = cells.get(10).text().trim();
 
-                    dm.submitRow(courseName, componentName, sectionName, number,
+                    dm.submitRow(courseName, subjectCode, componentName, sectionName, number,
                             instructor, campus, delivery, location,
                             days, startTime, endTime);
                 }
 
-                logger.info("Finished parsing " + courseName);
+                logger.info("Finished parsing course: " + courseName);
             }
+            logger.info("Finished parsing subject: " + subjectCode);
         }
     }
 
@@ -161,4 +176,37 @@ public class NewScraper {
         }
         return result;
     }
+
+    // old code, not used
+    public List<String> getIndividualCourseURL() throws IOException {
+        /* Get list of all individual course URLs */
+        Document allCoursesDoc = Jsoup.connect("https://www.westerncalendar.uwo.ca/AllCourses.cfm?SelectedCalendar=Live&ArchiveID=")
+                .maxBodySize(40 * 1024 * 1024) // 40 MB limit, up from the default of 2 MB
+                .data("SubjectFilter", "")
+                .data("SelectedCalendar", "Live")
+                .data("ArchiveID", "")
+                .data("ShowCourses", "1")
+                .post();
+
+        List<String> cacIDs = allCoursesDoc.select("a:containsOwn(More details)").stream()
+                .map(a -> a.absUrl("href"))
+                .map(a -> getQueryParamValue(a, "CourseAcadCalendarID"))
+                .toList();
+
+        List<String> urls = new ArrayList<>();
+
+        for (String c : cacIDs) {
+            if (c == null) {
+                logger.warning("got a null CourseAcadCalendarID");
+                continue;
+            }
+
+            urls.add(String.format("https://draftmyschedule.uwo.ca/secure/courses.cfm?CourseAcadCalendarID=%s&SelectedCalendar=Live&referer_link=Course_listing&ArchiveID=", c));
+        }
+
+        logger.info("Number of courses found:" + urls.size());
+
+        return urls;
+    }
+
 }
