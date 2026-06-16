@@ -48,13 +48,12 @@ public class NewScraper {
         List<String> subjectCodes = new ArrayList<>();
 
         Elements options = select.select("option");
-        for (int i = 1; i < options.size(); i++) {   // start at 1 to skip index 0
+        for (int i = 1; i < options.size(); i++) {   // start at 1 to skip "Select a Subject" placeholder
             Element option = options.get(i);
             String cls = option.attr("class");
             String value = option.attr("value");
             String text = option.text().trim();            // normalized innerText
 
-            System.out.printf("class=%s | value=%s | text=%s%n", cls, value, text);
             dm.submitSubject(value, text, cls);
             subjectCodes.add(value);
         }

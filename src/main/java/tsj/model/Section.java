@@ -11,7 +11,7 @@ public class Section {
 
     public String name;
     public String number;
-    public String location;
+//    public String location;
     public String instructor;
     public String campus;
     public String delivery;
@@ -30,7 +30,7 @@ public class Section {
     public Section(String name, String number, String location, String instructor, String campus, String delivery) {
         this.name = name;
         this.number = number;
-        this.location = location;
+//        this.location = location;
         this.instructor = instructor;
         this.campus = campus;
         this.delivery = delivery;
@@ -53,9 +53,9 @@ public class Section {
     }
 
     public void addTime(String startStr, String endStr, int dayIdx, String location, Logger logger) {
-        if (!this.location.equals(location)) {
-            throw new IllegalArgumentException("different locations same section");
-        }
+//        if (!this.location.equals(location)) {
+//            throw new IllegalArgumentException("different locations same section");
+//        }
 
         if (dayIdx > 4 || dayIdx < 0)
             throw new IllegalArgumentException("dayIdx not proper");
