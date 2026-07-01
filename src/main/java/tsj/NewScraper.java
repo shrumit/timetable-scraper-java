@@ -9,6 +9,7 @@ import tsj.model.Section;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class NewScraper {
@@ -41,7 +42,7 @@ public class NewScraper {
 
         Element select = doc.selectFirst("select#Subject");
         if (select == null) {
-            System.out.println("Select element not found.");
+            logger.severe("Select element not found.");
             return;
         }
 
@@ -60,33 +61,49 @@ public class NewScraper {
 
         // 2. For each subject, get all its courses
         for (int j = 0; j < subjectCodes.size(); j++) {
+
             String subjectCode = subjectCodes.get(j);
-            logger.info(String.format("Downloading subject page %s of %s: %s", j, subjectCodes.size() - 1, subjectCode));
+            logger.info(String.format("Downloading subject: %s. (%s of %s)", subjectCode, j, subjectCodes.size() - 1));
 
-            doc = Jsoup.connect("https://draftmyschedule.uwo.ca/secure/builder.cfm")
-                    .maxBodySize(40 * 1024 * 1024) // 40 MB limit, up from the default of 2 MB
-                    .method(Connection.Method.POST)
-                    .header("content-type", "application/x-www-form-urlencoded")
-                    .header("cache-control", "no-cache")
-                    .header("priority", "u=0")
-                    .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
-                            "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                            "Chrome/149.0.0.0 Safari/537.36")
-                    .cookie("CFID", creds.cfid())
-                    .cookie("CFTOKEN", creds.cftoken())
-                    .cookie("FORM_AGREEMENT", "1")
-                    .requestBody(String.format("version_id=&Subject=%s&delivery_type=All&catalog_nbr_typed=&catalog_nbr=" +
-                            "&day=m&day=tu&day=w&day=th&day=f&Designation=Any&start_time=&end_time=" +
-                            "&Campus=Any&course_component=LEC&course_component=TUT&course_component=LAB" +
-                            "&command_search=search", subjectCode))
-                    .execute()
-                    .parse();
+            long dlStartTime = System.nanoTime();
+            doc = downloadSubjectPage(creds, subjectCode, "");
+            long dlEndTime = System.nanoTime();
 
-            var courseNames = doc.select("h4").eachText();
-            var courseTables = doc.select("table.table-hover");
+            List<String> courseNames = new ArrayList<>();
+            Elements courseTables = new Elements();
 
-            if (courseNames.size() != courseTables.size() - 1) {
-                logger.severe("mismatched sizes of courseNames and courseTables. outerHTML of page:" + doc.outerHtml());
+            // the form won't return results if the subject has over 300 courses. so we query by course number prefix and download separately.
+            if (doc.text().contains("Unable to display your search results as it exceeds")) {
+                logger.info("Exceeds results error. Downloading separately and combining.");
+                for (String courseNumPrefix : List.of("1", "2", "3", "4")) {
+                    logger.info(String.format("Downloading subject-part: %s-%s.", subjectCode, courseNumPrefix));
+                    var sepDoc = downloadSubjectPage(creds, subjectCode, courseNumPrefix);
+                    var cn = sepDoc.select("h4").eachText();
+                    var ct = sepDoc.select("table.table-hover");
+//                    printSepDocLists(cn, ct);
+                    if (cn.size() != ct.size() - 1) {
+                        logger.severe("mismatched sizes of courseNames and courseTables. outerHTML of page:" + sepDoc.outerHtml());
+                        throw new IllegalArgumentException();
+                    }
+                    courseNames.addAll(cn);
+                    courseTables.addAll(ct);
+                    courseTables.remove(courseTables.size()-1); // trim the last one
+                }
+            } else {
+                var cn = doc.select("h4").eachText();
+                var ct = doc.select("table.table-hover");
+//                printSepDocLists(cn, ct);
+                if (cn.size() != ct.size() - 1) {
+                    logger.severe("mismatched sizes of courseNames and courseTables. outerHTML of page:" + doc.outerHtml());
+                    throw new IllegalArgumentException();
+                }
+                courseNames.addAll(cn);
+                courseTables.addAll(ct);
+                courseTables.remove(courseTables.size()-1); // trim the last one
+            }
+
+            if (courseNames.isEmpty() && !doc.text().contains("Search results: 0 Subject(s)")) {
+                logger.severe("zero courses parsed from subject page. outerHTML of page:" + doc.outerHtml());
                 throw new IllegalArgumentException();
             }
 
@@ -95,7 +112,7 @@ public class NewScraper {
                 String courseName = courseNames.get(i);
                 Element table = courseTables.get(i);
 
-                logger.info(String.format("Parsing course %s of %s: %s", i, courseNames.size() - 1, courseName));
+                logger.info(String.format("Parsing course: %s (%s of %s)", courseName, i, courseNames.size() - 1));
 
                 for (Element row : table.select("> tbody > tr:not(.active)")) {
                     // Direct child <td> cells only — avoids the nested days/times table.
@@ -120,7 +137,7 @@ public class NewScraper {
                         List<Section.Days> days = parseDays(dtlCells.get(0).text());
                         String[] times = dtlCells.get(1).text().split("-");
                         if (days.isEmpty() || times.length == 0) {
-                            logger.warning(String.format("Skipped row because parsed days/time was empty for course: %s, subject: %s", courseName, subjectCode));
+                            logger.info(String.format("Skipped row because parsed days/time was empty for course: %s, subject: %s, dtlRow: %s", courseName, subjectCode, dtlRow.outerHtml()));
                             continue;
                         }
                         String startTime = times[0].trim();
@@ -132,10 +149,14 @@ public class NewScraper {
                                 days, startTime, endTime);
                     }
                 }
-
                 logger.info("Finished parsing course: " + courseName);
             }
-            logger.info("Finished parsing subject: " + subjectCode);
+
+            long parseEndtime = System.nanoTime();
+            String downloadMs = String.valueOf(TimeUnit.NANOSECONDS.toMillis(dlEndTime - dlStartTime));
+            String parseMs    = String.valueOf(TimeUnit.NANOSECONDS.toMillis(parseEndtime - dlEndTime));
+            logger.info(String.format("Finished parsing subject: %s. DL time: %sms. Parse time: %sms", subjectCode, downloadMs, parseMs));
+//            logger.info("Finished parsing subject: " + subjectCode);
         }
     }
 
@@ -198,6 +219,40 @@ public class NewScraper {
         logger.info("Number of courses found:" + urls.size());
 
         return urls;
+    }
+
+    private Document downloadSubjectPage(Login.Creds creds, String subjectCode, String catalogNbrTyped) throws IOException {
+        var doc = Jsoup.connect("https://draftmyschedule.uwo.ca/secure/builder.cfm")
+                .maxBodySize(40 * 1024 * 1024) // 40 MB limit, up from the default of 2 MB
+                .method(Connection.Method.POST)
+                .header("content-type", "application/x-www-form-urlencoded")
+                .header("cache-control", "no-cache")
+                .header("priority", "u=0")
+                .userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+                        "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                        "Chrome/149.0.0.0 Safari/537.36")
+                .cookie("CFID", creds.cfid())
+                .cookie("CFTOKEN", creds.cftoken())
+                .cookie("FORM_AGREEMENT", "1")
+                .requestBody(String.format("version_id=&Subject=%s&delivery_type=All&catalog_nbr_typed=%s&catalog_nbr=" +
+                        "&day=m&day=tu&day=w&day=th&day=f&Designation=Any&start_time=&end_time=" +
+                        "&Campus=Any&course_component=LEC&course_component=TUT&course_component=LAB" +
+                        "&command_search=search", subjectCode, catalogNbrTyped))
+                .execute()
+                .parse();
+        return doc;
+    }
+
+    private void printSepDocLists(List<String> cn, Elements ct) {
+        System.out.println("Headings (h4): " + cn.size() + " found");
+        for (String heading : cn) {
+            System.out.println("  " + heading);
+        }
+
+        System.out.println("Tables (table.table-hover): " + ct.size() + " found");
+        for (Element table : ct) {
+            System.out.println("  " + table.outerHtml());
+        }
     }
 
 }

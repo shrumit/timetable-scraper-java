@@ -117,7 +117,7 @@ public class DataManager {
         CommonUtils.saveToFile(produceSearchJson(coursesList), outputDir, searchFileName, logger);
         CommonUtils.saveToFile(produceMetadataJson(metadataBuilder.build()), outputDir, metadataFileName, logger);
         CommonUtils.saveToFile(produceSubjectJson(subjectsList), outputDir, subjectsFilename, logger);
-        logger.info(String.format("Saved output for %s courses to %s", courses.size(), outputDir));
+        logger.info(String.format("Saved output to %s. Stats: %s", outputDir, produceStats()));
     }
 
     private static String produceMetadataJson(Metadata m) {
@@ -165,5 +165,19 @@ public class DataManager {
     private static String produceSubjectJson(List<Subject> subjectsList) {
         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
         return gson.toJson(subjectsList);
+    }
+
+    record Stats(long courseCount, long compCount, long sectionCount){};
+    private Stats produceStats() {
+        long compCount = 0;
+        long sectionCount = 0;
+        for (var e : courses.entrySet()) {
+            compCount += e.getValue().components.size();
+            for (var c : e.getValue().components) {
+                sectionCount += c.sections.size();
+            }
+        }
+
+        return new Stats(courses.size(), compCount, sectionCount);
     }
 }

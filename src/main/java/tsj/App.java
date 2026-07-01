@@ -83,6 +83,8 @@ public class App {
             logger.info("Scraping in new mode");
             String uname = System.getenv("UWO_UNAME");
             String pw = System.getenv("UWO_PW");
+            if (uname == null || pw == null)
+                throw new IllegalStateException("Must set UWO_UNAME and UWO_PW in the environment.");
             Login.Creds c = Login.getCreds(uname, pw);
 
             DataManager dm = new DataManager(logger);
